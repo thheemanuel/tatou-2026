@@ -14,16 +14,25 @@ from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
-import pickle as _std_pickle
-try:
-    import dill as _pickle  # allows loading classes not importable by module path
-except Exception:  # dill is optional
-    _pickle = _std_pickle
+import pickle
 
 
 import watermarking_utils as WMUtils
 from watermarking_method import WatermarkingMethod
 #from watermarking_utils import METHODS, apply_watermark, read_watermark, explore_pdf, is_watermarking_applicable, get_method
+
+class SafeUnpickler(pickle.Unpickler):
+    """Pickle loader that refuses to import anything except our base class.
+
+    Normal pickle.load() executes code hidden in the file (e.g. os.system).
+    
+    Every import a pickle performs goes through find_class(), so by
+    allowing ONLY WatermarkingMethod here, exploit payloads fail before they can run anything.
+    """
+    def find_class(self, module, name):
+        if module == "watermarking_method" and name == "WatermarkingMethod":
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(f"forbidden class: {module}.{name}")
 
 def create_app():
     app = Flask(__name__)
@@ -677,22 +686,33 @@ def create_app():
 
         # Locate the plugin in /storage/files/plugins (relative to STORAGE_DIR)
         storage_root = Path(app.config["STORAGE_DIR"])
-        plugins_dir = storage_root / "files" / "plugins"
+        plugins_dir = (storage_root / "files" / "plugins").resolve()
         try:
             plugins_dir.mkdir(parents=True, exist_ok=True)
-            plugin_path = plugins_dir / filename
-        except Exception as e:
-            return jsonify({"error": f"plugin path error: {e}"}), 500
+            plugin_path = (plugins_dir / filename).resolve()
+        except Exception:
+            return jsonify({"error": "plugin path error"}), 500
+
+        # Reject filenames that escape the plugins directory (e.g. ../../)
+        if not plugin_path.is_relative_to(plugins_dir):
+            return jsonify({"error": "invalid plugin path"}), 400
+
+        # Only accept the expected file types
+        if plugin_path.suffix.lower() not in (".pkl", ".dill"):
+            return jsonify({"error": "invalid plugin extension"}), 400
 
         if not plugin_path.exists():
-            return jsonify({"error": f"plugin file not found: {safe}"}), 404
+            return jsonify({"error": "plugin file not found"}), 404
 
         # Unpickle the object (dill if available; else std pickle)
+        # Unpickle with the restricted loader (blocks code-execution payloads)
         try:
             with plugin_path.open("rb") as f:
-                obj = _pickle.load(f)
-        except Exception as e:
-            return jsonify({"error": f"failed to deserialize plugin: {e}"}), 400
+                obj = SafeUnpickler(f).load()
+        except pickle.UnpicklingError:
+            return jsonify({"error": "plugin rejected: contains forbidden classes"}), 400
+        except Exception:
+            return jsonify({"error": "failed to deserialize plugin"}), 400
 
         # Accept: class object, or instance (we'll promote instance to its class)
         if isinstance(obj, type):
