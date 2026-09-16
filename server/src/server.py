@@ -8,7 +8,8 @@ from functools import wraps
 from flask import Flask, jsonify, request, g, send_file
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
+# Changed badsignature into baddata which is parent of both badsignature and badpayload this will stop valid tokens that contains bad payloads
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
@@ -72,8 +73,10 @@ def create_app():
                 data = _serializer().loads(token, max_age=app.config["TOKEN_TTL_SECONDS"])
             except SignatureExpired:
                 return _auth_error("Token expired")
-            except BadSignature:
+            except BadData:
                 return _auth_error("Invalid token")
+            # Changed Badsignature into BadData which is the parent of both badsignature and badpayload
+            # this will catch a token that is valid but contains a bad payload
             g.user = {"id": int(data["uid"]), "login": data["login"], "email": data.get("email")}
             return f(*args, **kwargs)
         return wrapper
