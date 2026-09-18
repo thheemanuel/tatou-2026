@@ -457,10 +457,7 @@ def create_app():
                 or (request.is_json and (request.get_json(silent=True) or {}).get("id"))
             )
         try:
-            # CWE-89 fix: cast to int instead of using the raw request value.
-            # This does two things at once — it rejects any non-numeric input
-            # outright (a SQL injection payload won't pass int()), and it
-            # guarantees doc_id can never be concatenated as a string later.
+            # CWE-89 fix: cast to int so non-numeric input never reaches a query.
             doc_id = int(document_id)
         except (TypeError, ValueError):
             return jsonify({"error": "document_id (int) is required"}), 400
@@ -468,14 +465,10 @@ def create_app():
         # Fetch the document (enforce ownership)
         try:
             with get_engine().connect() as conn:
-                # Fix: replaced string concatenation ("... WHERE id = " + doc_id)
-                # with a parameterized query. The value is passed separately
-                # from the SQL text, so the driver sends it as data, never as
-                # part of the SQL statement itself — this is what actually
-                # closes the injection, independent of the int() cast above.
-                # Also added "AND ownerid = :uid": the original query had no
-                # ownership check, so any authenticated user could look up
-                # (and therefore delete) another user's document by id.
+                # fix: parameterized query (was string concat, SQLi, CWE-89) +
+                # added ownerid check (was missing, IDOR, CWE-639)
+                # https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+                # https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
                 row = conn.execute(
                     text("SELECT * FROM Documents WHERE id = :id AND ownerid = :uid"),
                     {"id": doc_id, "uid": int(g.user["id"])},
@@ -566,9 +559,10 @@ def create_app():
         # lookup the document; enforce ownership
         try:
             with get_engine().connect() as conn:
-                # fix: added ownerid check (IDOR fix, same issue as delete_document)                # original query only checked id, so any user could create a
+                # fix: added ownerid check (IDOR fix, same issue as delete_document) —
+                # original query only checked id, so any user could create a
                 # watermark for someone else's document
-                # https://cheatsheetseries.owasp.org/cheatsheets/Access_Control_Cheat_Sheet.html                    
+                # https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
                 row = conn.execute(
                     text("""
                         SELECT id, name, path
@@ -794,7 +788,7 @@ def create_app():
                 # fix: added ownerid check (IDOR fix) — original had a
                 # "FIXME enforce ownership" comment; without this any user
                 # could try to read the watermark secret out of any document
-                # https://cheatsheetseries.owasp.org/cheatsheets/Access_Control_Cheat_Sheet.html
+                # https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
                 row = conn.execute(
                     text("""
                         SELECT id, name, path
