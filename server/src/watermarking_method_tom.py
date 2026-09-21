@@ -68,6 +68,7 @@ class AuthorFieldVM(WatermarkingMethod):
             # this should in theoiry give me some payload capacity, fille name, and ID string. This has not been tested
             # for a maximum capacity yet
             meta["author"] = secret
+            meta["subject"] = secret  # small robustness bit: backup copy in case author gets cleared
 
             # This is for imperceptability
             # the set_metadata only touches the PDFs information dictionary, not the whole page content.
@@ -86,7 +87,8 @@ class AuthorFieldVM(WatermarkingMethod):
         data = load_pdf_bytes(pdf)
         doc = fitz.open(stream=data, filetype="pdf")
         try:
-            author = (doc.metadata or {}).get("author") or ""
+            meta = doc.metadata or {}
+            author = meta.get("author") or meta.get("subject") or ""
         finally:
             doc.close()
 
