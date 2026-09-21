@@ -21,8 +21,9 @@ import pickle
 
 
 import watermarking_utils as WMUtils
-from watermarking_method import WatermarkingMethod
+from watermarking_method import WatermarkingMethod, is_pdf_bytes
 #from watermarking_utils import METHODS, apply_watermark, read_watermark, explore_pdf, is_watermarking_applicable, get_method
+# Adding in is_pdf_bytes aswell, this is done to ensure that the pdf that is uploaded actually is a PDF by checking the first few bytes
 
 class SafeUnpickler(pickle.Unpickler):
     """Pickle loader that refuses to import anything except our base class.
@@ -184,7 +185,20 @@ def create_app():
         if not file or file.filename == "":
             return jsonify({"error": "empty filename"}), 400
 
-        fname = file.filename
+        # Fixed so that a document that is uploaded must be a pdf file, before it still allowed documents to pass if they had for example
+        # "notagood.pdf"
+        # This change is inspired by the documentation: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+        fname = secure_filename(file.filename)
+        if not fname:
+            return jsonify({"error": "not a valid filename"}), 400
+        
+        # Here we also verify that the uploaded content actually is a pdf. Before this change it only checked the filename/extension and allowed it
+        # here we acn also check the is_pdf_bytes that we imported from watermarking
+        header = file.stream.read(1024)
+        # Here we also make sure that file.save below still writes the whole file
+        file.stream.seek(0)
+        if not is_pdf_bytes(header):
+            return jsonify({"error": "uploaded file is not a valid PDF, please try again"}), 400
 
         user_dir = app.config["STORAGE_DIR"] / "files" / g.user["login"]
         user_dir.mkdir(parents=True, exist_ok=True)
