@@ -42,14 +42,12 @@ from watermarking_method import (
     load_pdf_bytes,
 )
 from add_after_eof import AddAfterEOF
-from watermarking_method_gustav import InvisibleTextWatermark
 # --------------------
 # Method registry
 # --------------------
 
 METHODS: Dict[str, WatermarkingMethod] = {
     AddAfterEOF.name: AddAfterEOF(),
-    InvisibleTextWatermark.name: InvisibleTextWatermark(),
 }
 """Registry of available watermarking methods.
 
