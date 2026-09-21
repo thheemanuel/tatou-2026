@@ -47,7 +47,7 @@ from add_after_eof import AddAfterEOF
 # --------------------
 
 METHODS: Dict[str, WatermarkingMethod] = {
-    AddAfterEOF.name: AddAfterEOF(),    
+    AddAfterEOF.name: AddAfterEOF(),
 }
 """Registry of available watermarking methods.
 
