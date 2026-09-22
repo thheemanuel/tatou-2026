@@ -45,6 +45,8 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     app.config["STORAGE_DIR"] = Path(os.environ.get("STORAGE_DIR", "./storage")).resolve()
     app.config["TOKEN_TTL_SECONDS"] = int(os.environ.get("TOKEN_TTL_SECONDS", "86400"))
+    # Adding in a max upload limit to 20MB so that an attacker can not upload an insanely huge file
+    app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 20 * 1024 * 1024))
 
     app.config["DB_USER"] = os.environ.get("DB_USER", "tatou")
     app.config["DB_PASSWORD"] = os.environ.get("DB_PASSWORD", "tatou")
@@ -164,6 +166,15 @@ def create_app():
         password = payload.get("password") or ""
         if not email or not login or not password:
             return jsonify({"error": "email, login, and password are required"}), 400
+        
+        # Adding in so that it has to be a valid email including specific rules
+        if "@" not in email or "." not in email.split("@")[-1]:
+            return jsonify({"error": "this is an invalid email format, please create a valid email"}), 400 
+        
+        # Also implementing a parameter here so that a password actually has to be a certain length
+        # jsut a nice thing to have so that people do not create unsafe passwords. We can have 8 base for now
+        if len(password) < 8:
+            return jsonify({"error": "password must be at least 8 characters long, please try again!"}), 400
 
         hpw = generate_password_hash(password)
 
