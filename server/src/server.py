@@ -76,7 +76,7 @@ def create_app():
     
     app.config["RMAP_DOCUMENT_ID"] = int(os.environ["RMAP_DOCUMENT_ID"])
     
-    app.config["RMAP_WATERMARK_METHOD"] = os.environ("RMAP_WATERMARK_METHOD", "toy-eof")
+    app.config["RMAP_WATERMARK_METHOD"] = os.environ.get("RMAP_WATERMARK_METHOD", "toy-eof")
     
     app.config["RMAP_WATERMARK_KEY"] = os.environ["RMAP_WATERMARK_KEY"]
     
