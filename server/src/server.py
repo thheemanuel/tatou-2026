@@ -51,6 +51,40 @@ def create_app():
     app.config["DB_HOST"] = os.environ.get("DB_HOST", "db")
     app.config["DB_PORT"] = int(os.environ.get("DB_PORT", "3306"))
     app.config["DB_NAME"] = os.environ.get("DB_NAME", "tatou")
+    
+    # adding the rmap implementation below:
+    # environment variables would probably need to be implemented in the environment file. Will look into this later.
+    
+    app.config["RMAP_SERVER_PUB"] = Path(
+        os.environ.get("RMAP_SERVER_PUB", "PATH_PUBLIC_KEY")
+    )
+    app.config["RMAP_SERVER_PRIV"] = Path(
+        os.environ.get("RMAP_SERVER_PRIV", "PATH_PRIVATE_KEY")
+    )
+    app.config["RMAP_CLIENT_KEYS"] = Path(
+        os.environ.get("RMAP_CLIENT_KEYS", "PATH_CLIENT_KEYS")
+    )
+    
+    # the id of the pdf after uploading it into tatou.
+    
+    app.config["RMAP_DOCUMENT_ID"] = int(os.environ.get("RMAP_DOCUMENT_ID", "0"))
+    
+    # picking the watermarking method.
+    
+    app.config["RMAP_WATERMARK_METHOD"] = os.environ.get("RMAP_WATERMARK_METHOD", "METHOD")
+    
+    # make sure to keep the watermarking key a secret
+    
+    app.config["RMAP_WATERMARK_KEY"] = os.environ.get(
+        "RMAP_WATERMARK_KEY", "")
+    
+    rmap_server = RMAPServer(
+        app.config["RMAP_SERVER_PUB"],
+        app.config["RMAP_SERVER_PRIV"],
+        linkPrefix="", #keep the results as hex (32) token
+    )
+    
+    rmap_server.loadIdentities(app.config["RMAP_CLIENT_KEYS"])
 
     app.config["STORAGE_DIR"].mkdir(parents=True, exist_ok=True)
 
