@@ -9,6 +9,7 @@ services:
       - "5000:5000"
     volumes:
       - user-files:/app/storage
+      - ../tatou-rmap/soft-sec-keys:/app/rmap-keys:ro
     environment:
       - PYTHONUNBUFFERED=1
       # DB connection details for future use by the API
@@ -17,7 +18,15 @@ services:
       - DB_NAME=tatou
       - DB_USER=${MARIADB_USER}
       - DB_PASSWORD=${MARIADB_PASSWORD}
+
       - FLAG_2=${FLAG_2}
+
+      - RMAP_SERVER_PUB=/app/rmap-keys/clients/Group_21.asc
+      - RMAP_SERVER_PRIV=/app/rmap-keys/group21-private.asc
+      - RMAP_CLIENT_KEYS=/app/rmap-keys/clients
+      - RMAP_DOCUMENT_ID=${RMAP_DOCUMENT_ID}
+      - RMAP_WATERMARK_METHOD=${RMAP_WATERMARK_METHOD}
+      - RMAP_WATERMARK_KEY=${RMAP_WATERMARK_KEY}
     depends_on:
       db:
         condition: service_healthy
