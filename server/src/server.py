@@ -83,7 +83,7 @@ def create_app():
     # starting the server-side of the RMAP-protocol
     
     rmap_server = RMAPServer(
-        app.config["RMAP_SERVERV_PUB"],
+        app.config["RMAP_SERVER_PUB"],
         app.config["RMAP_SERVER_PRIV"],
         linkPrefix="",
         )
