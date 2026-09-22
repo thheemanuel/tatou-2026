@@ -952,6 +952,72 @@ def create_app():
             "method": method,
             "position": position
         }), 201
+        
+    
+    @app.post("/api/rmap-initiate")
+    def rmap_initiate():
+        
+        #flask converts the json body of the http request into a python dictionary
+        #silent = True means that Flask return None instead of raising an exception of the request does not contain valid json format.
+        data = request.get_json(silent=True)
+        
+        #the messages needs to begin with {}"payload": "..."}
+        
+        #checking that:
+        #1. the request body is a json object (python dictionary)
+        #2. it contains a field called "payload"
+        #3. the payload is a string
+        if not isinstance(data, dict) or not isinstance(data.get("payload"), str):
+            return jsonify({
+                "error": "invalid RMAP message"
+            }), 400
+        
+        try:
+            
+            # sending the first message to the rmap library
+            
+            #receiveMsg1() encrypts and decrypts the messsage
+            
+            #if successfull it gives two useful values:
+            
+            #identity: authenticated identity claimed in message 1, for example "Group_07"
+            
+            #response: the encrypted RMAP response 1 that must be sent back to the client.
+            identity, response = rmap_server.recieveMsg1(data)
+            
+            # record the identity which started the handshake, do not log secret information.
+            app.logger.info(
+                "RMAP handshake initiated by %s",
+                identity
+            )
+            
+            #send the response message back to the client/user.
+            
+            #HTTP 200 means that this step of the handshake succeeded.
+            
+            return jsonify(response), 200
+        
+        #the rmap library rejected the message
+        except RMAPError as e:
+            app.logger.warning(
+                "RMAP authentication failed: %s",
+                e
+            )
+            
+            return jsonify({
+                "error": "RMAP authentication failed"
+            }), 401
+        
+        #catches other unexpected probelsm with the incoming message so that flask does not return an uncontrolled traceback to the user.
+        except Exception:
+            app.logger.exception(
+                "Invalid RMAP initiate message"
+            )
+            
+            #returning 400, bad request
+            return jsonify({
+                "error": "invalid RMAP message"
+            }), 400
 
     return app
     
