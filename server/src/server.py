@@ -74,11 +74,11 @@ def create_app():
     
     app.config["RMAP_CLIENT_KEYS"] = Path(os.environ["RMAP_CLIENT_KEYS"])
     
-    app.config["RMAP_DOCUMENT_ID"] = Path(os.environ["RMAP_DOCUMENT_ID"])
+    app.config["RMAP_DOCUMENT_ID"] = int(os.environ["RMAP_DOCUMENT_ID"])
     
-    app.config["RMAP_WATERMARK_METHOD"] = Path(os.environ["RMAP_WATERMARK_METHOD", "toy-eof"])
+    app.config["RMAP_WATERMARK_METHOD"] = os.environ("RMAP_WATERMARK_METHOD", "toy-eof")
     
-    app.config["RMAP_WATERMARK_KEY"] = Path(os.environ["RMAP_WATERMARK_KEY"])
+    app.config["RMAP_WATERMARK_KEY"] = os.environ["RMAP_WATERMARK_KEY"]
     
     # starting the server-side of the RMAP-protocol
     
