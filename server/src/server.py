@@ -2,6 +2,15 @@ import os
 import io
 import hashlib
 import datetime as dt
+
+# Adding in parameters so that other groups can not keep sweeping our system
+# After doing this on other groups I realized we could just sweep everything without it taking anytime
+# We want to make it time consuming for unlegit users
+# This is mentioned in the owasp.github.io/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/
+# as something that is common across vulnerabilities in APIs
+import time
+from collections import defaultdict
+
 from pathlib import Path
 from functools import wraps
 
@@ -19,11 +28,13 @@ from sqlalchemy.exc import IntegrityError
 
 import pickle
 
-
+# From watermarking_utils import METHODS, apply_watermark, read_watermark, explore_pdf, is_watermarking_applicable, get_method
 import watermarking_utils as WMUtils
-from watermarking_method import WatermarkingMethod, is_pdf_bytes
-#from watermarking_utils import METHODS, apply_watermark, read_watermark, explore_pdf, is_watermarking_applicable, get_method
+
 # Adding in is_pdf_bytes aswell, this is done to ensure that the pdf that is uploaded actually is a PDF by checking the first few bytes
+# This is also mentioned in owasp.github.io/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/,
+# as a way to prevent loads of resource consumption
+from watermarking_method import WatermarkingMethod, is_pdf_bytes
 
 class SafeUnpickler(pickle.Unpickler):
     """Pickle loader that refuses to import anything except our base class.
@@ -136,9 +147,42 @@ def create_app():
             for chunk in iter(lambda: f.read(1024 * 1024), b""):
                 h.update(chunk)
         return h.hexdigest()
-
-    # --- Routes ---
     
+    # --- Time limiting for sweeps ---
+    # Inspired by owasp.github.io/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/
+    # Depending on ip adress, have a list of all recent request times
+    # Define variables for allowed amount of requests within a certain time limit
+    request_log = defaultdict(list)
+    request_limit_count = 30
+    time_limit_window = 60
+    
+    @app.before_request
+    def timeRate_limit():
+        # First make it so that we dont limit the amount of times 
+        # healthz is called. Should be unaffected here
+        if request.path == "/healthz":
+            return
+        
+        # Get the address for the one that sent the requests
+        # And create this ips own personal list of request timestamps
+        ip = request.remote_addr
+        now = time.time()
+        timestamps = request_log[ip]
+       
+        # Go through the list and remove anything that is outside of our time window,
+        # we only care about what happens within the time limit window
+        while timestamps and timestamps[0] < now - time_limit_window:
+            timestamps.pop(0)
+        
+        # If they already have the amount of requests allowed within the time limit,
+        # send then an error message and stop here. This is just done so that unwanted users need to wait longer
+        if len(timestamps) >= request_limit_count:
+            return jsonify({"error": "too many request done, please slow down from now on!"}), 429
+        
+        # If we are within the time limit, this is most likely a legit user then they can proceed
+        timestamps.append(now)
+    
+    # --- Routes ---
     @app.route("/<path:filename>")
     def static_files(filename):
         return app.send_static_file(filename)
