@@ -1121,9 +1121,6 @@ def create_app():
             
         database_path = str(destination_path)
         
-        
-        
-        
         #add the new version to the database,
         #documentid point back to the original confidential pdf
         #intenedn_for records which authenticated group recieves this version.
