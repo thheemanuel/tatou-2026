@@ -983,7 +983,7 @@ def create_app():
             #identity: authenticated identity claimed in message 1, for example "Group_07"
             
             #response: the encrypted RMAP response 1 that must be sent back to the client.
-            identity, response = rmap_server.recieveMsg1(data)
+            identity, response = rmap_server.receiveMsg1(data)
             
             # record the identity which started the handshake, do not log secret information.
             app.logger.info(
