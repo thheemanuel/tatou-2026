@@ -1117,6 +1117,22 @@ def create_app():
                     "path": database_path
                 },
             )
+            
+            
+    #this endpoint is supposed to handle the second message in the rmap handshake.
+    
+    #the first endpoint and the method above (/api/rmap-initiate) handled message 1 and started the authentication process.
+    
+    # the client now sends message 2. if it is valid, the rmap library will provide three things
+    
+    #identity > the authenticated group "Group_XX"
+    #link > unique 32 character link for this retrieval
+    #response > the encrypted rmap response that we send back to the client.
+            
+    @app.post("/api/rmap-get-link")
+    def rmap_get_link():
+        
+        return
 
     return app
     
