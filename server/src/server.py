@@ -1132,6 +1132,65 @@ def create_app():
     @app.post("/api/rmap-get-link")
     def rmap_get_link():
         
+        #get the json sent by the client.
+        data = request.get_json(silent=True)
+        
+        #reject the request if the structure doesnt match json
+        
+        if not isinstance(data, dict) or not isinstance(data.get("payload"), str):
+            return jsonify({"error": "invalid RMAP message"}), 400
+        
+        # the next step is to complete the rmap handshake 
+        
+        # message 2 checks the second encrypted message 
+        # and makes sure it belongs to a handshake that 
+        # was previously started through the initiate api
+        
+        try:
+            
+            identity, link, response = rmap_server.receiveMsg2(data)
+            
+            create_rmap_watermark(
+                identity=identity,
+                link=link
+            )
+            
+            app.logger.info(
+                "Created RMAP version for %s with link %s",
+                identity,
+                link
+            )
+            
+            return jsonify(response), 200
+        
+        # a lot of things can go wrong, lets try to catch all of them
+        
+        except RMAPError as e:
+            
+            app.logger.warning("RMAP authentication failed: %s", e)
+            
+        except FileExistsError:
+            
+            return jsonify({
+                "error": "RMAP link already used"
+            }), 401
+            
+        except FileExistsError:
+            
+            return jsonify({
+                "error": "RMAP link already used"
+            }), 409
+            
+        except Exception:
+            
+            app.logger.exception(
+                "Failed to create RMAP watermarked document"
+            )
+            
+            return jsonify({
+                "error": "failed to create watermarked document"
+            }), 500
+        
         return
 
     return app
