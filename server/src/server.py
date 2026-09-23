@@ -1032,11 +1032,91 @@ def create_app():
     # add a watermark identifying this rmap retrieval,
     # saves the new pdf
     # adds the new version to the "Versions" table in the db
-    def create_rmap_watermark():
+    def create_rmap_watermark(identity: str, link: str):
+        
+        #the id of our original confidential pdf comes from RMAP_DOCUMENT_ID in the .env file
+        
+        document_id = app.config["RMAP_DOCUMENT_ID"]
+        
+        # we now need to find our original pdf in the database
+        
+        with get_engine().connect() as conn:
+            document = conn.execute(text("""SELECT id, name, path FROM Documents WHERE id = :id LIMIT 1"""), {"id": document_id},).first()
+        
+        #if no document had this ID, RMAP_DOCUMENT_ID is pointing to a document that does not exist
+        
+        if not document:
+            raise RuntimeError(f"RMAP document {document_id} does not exist")
+        
+        storage_root = Path(app.config["STORAGE_DIR"]).resolve()
+        
+        source_path = Path(document.path)
         
         
         
-        return 
+        # create the watermark, the watermark contains
+        # group identity and unique rmap link
+        
+        method = app.config["RMAP_WATERMARK_METHOD"]
+        key = app.config["RMAP_WATERMARK_KEY"]
+        
+        watermark_secret =f"{identity}:{link}"
+        
+        #test or try and check if our selected watermarking method works for this pdf.
+        
+        is_applicable = WMUtils.is_watermarking_applicable(method=method,pdf=str(source_path),position=None)
+        
+        if is_applicable is False:
+            raise RuntimeError("Watermarking method is not applicable")
+        
+        #after checking, apply the watermark to the pdf
+        # apply_watermark() returns the new pdf (as bytes?)
+        
+        watermarked_pdf = WMUtils.apply_watermark(method=method,pdf=str(source_path),secret=watermark_secret,key=key,position=None)
+        
+        #save the rmap generated files in their own directory
+        
+        #/app/storage/rmap/
+        
+        rmap_directory = storage_root / "rmap"
+        rmap_directory.mkdir(parents=True, exist_ok=True)
+        
+        #using the rmap link as the filename
+        
+        destination_path = rmap_directory / f"{link}.pdf"
+        
+        with destination_path.open("xb") as pdf_file:
+            pdf_file.write(watermarked_pdf)
+            
+        database_path = str(destination_path.relative_to(storage_root))
+        
+        
+        
+        
+        #add the new version to the database,
+        #documentid point back to the original confidential pdf
+        #intenedn_for records which authenticated group recieves this version.
+        #secret, records the watermark that was placed in this version
+        #link allows the existing api endpoint to get version / link to find the link.
+        
+        with get_engine().begin() as conn:
+            conn.execute(
+                text("""
+                     INSERT INTO Versions
+                        (link, documentid, intended_for, secret, method, position, path) 
+                    VALUES
+                        (:link, :documentid, :intended_for, :secret, :method, :position, :path)
+                """), 
+                {
+                    "link": link,
+                    "documentid": document_id,
+                    "intended_for": identity,
+                    "secret": watermark_secret,
+                    "method": method,
+                    "position": None,
+                    "path": database_path
+                },
+            )
 
     return app
     
