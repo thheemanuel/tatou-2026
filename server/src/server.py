@@ -1094,7 +1094,7 @@ def create_app():
         with destination_path.open("xb") as pdf_file:
             pdf_file.write(watermarked_pdf)
             
-        database_path = str(destination_path.relative_to(storage_root))
+        database_path = str(destination_path)
         
         
         
