@@ -1190,8 +1190,6 @@ def create_app():
             return jsonify({
                 "error": "failed to create watermarked document"
             }), 500
-        
-        return
 
     return app
     
