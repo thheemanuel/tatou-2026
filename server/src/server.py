@@ -967,7 +967,7 @@ def create_app():
         #silent = True means that Flask return None instead of raising an exception of the request does not contain valid json format.
         data = request.get_json(silent=True)
         
-        #the messages needs to begin with {}"payload": "..."}
+        #the messages needs to begin with {"payload": "..."}
         
         #checking that:
         #1. the request body is a json object (python dictionary)
@@ -1054,7 +1054,32 @@ def create_app():
         if not document:
             raise RuntimeError(f"RMAP document {document_id} does not exist")
         
+        # vvvv documentation for the code below
+        
+        #app.config["STORAGE_DIR"]
+        
+        #gets the configured location of tatous storage 
+        # directory, in your docker container this is 
+        # essentially: /app/storage (basically represents a filesysem location)
+        
+        #Path(...)
+        
+        #converts it into a python path obejct, a path object 
+        # makes filesystem operations much easier. for example: 
+        # storage_root / "rmap" / "hello.py"
+        # ^^^this produces "/app/storage/rmap/hello.pdf"
+        
+        #.resolve()
+        #turns the path into absolute normalized filesystem path
+        
         storage_root = Path(app.config["STORAGE_DIR"]).resolve()
+        
+        #document.path
+        
+        #is a string of the direct path to the pdf (in storage)
+        
+        #essentially:
+            #take the location of the source pdf that we got from the database and represent it as a python filesystem path.
         
         source_path = Path(document.path)
         
