@@ -229,7 +229,10 @@ def create_app():
                     {"id": uid},
                 ).one()
         except IntegrityError:
-            return jsonify({"error": "email or login already exists"}), 409
+            # Changing this so it does not specifically tell the user that there already is an account,
+            # just tell the user that the current login didnt work
+            # This is not a required fix, but just want to provide the infiltrator with more information then needed
+            return jsonify({"error": "the account creation did not work with the current input, please try again"}), 409
         except Exception as e:
             return jsonify({"error": f"database error: {str(e)}"}), 503
 
