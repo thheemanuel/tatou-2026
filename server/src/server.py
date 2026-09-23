@@ -74,6 +74,8 @@ def create_app():
     
     app.config["RMAP_CLIENT_KEYS"] = Path(os.environ["RMAP_CLIENT_KEYS"])
     
+    app.config["RMAP_PRIVATE_KEY_PASSPHRASE"] = os.environ["RMAP_PRIVATE_KEY_PASSPHRASE"]
+    
     app.config["RMAP_DOCUMENT_ID"] = int(os.environ["RMAP_DOCUMENT_ID"])
     
     app.config["RMAP_WATERMARK_METHOD"] = os.environ.get("RMAP_WATERMARK_METHOD", "toy-eof")
@@ -85,8 +87,9 @@ def create_app():
     rmap_server = RMAPServer(
         app.config["RMAP_SERVER_PUB"],
         app.config["RMAP_SERVER_PRIV"],
+        passphrase=app.config["RMAP_PRIVATE_KEY_PASSPHRASE"],
         linkPrefix="",
-        )
+    )
     
     # provides all of the public keys of our users/clients
     
