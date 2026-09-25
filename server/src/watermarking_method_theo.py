@@ -99,14 +99,46 @@ class watermarking_method_theo(WatermarkingMethod):
             
         )
         
+    # unlike the add_after_eof.py watermarking method we need to encrypt/hash our secret! 
+    # so we will need a method for doing just that:
+    
+    def sign(secret: str, key: str):
+        
+        
+        # creating a cryptographic signature for the secret
+        # using both the secret and the key
+        
+        # since these kind of methods and operations work on bytes, we will need to convert the secret and key into bytes, from strings
+        
+        key_b = key.encode("utf-8")
+        secret_b = secret.encode("utf-8")
+        
+        
+        # now we calculate the hmac !
+        
+        signature = hmac.new(key_b, secret_b, hashlib.sha256)
+        
+        hex_sign = signature.hexdigest()
+        
+        return hex_sign
     
     
     
+    
+    # the add_after_eof method includes a method called "is_watermark_applicable"
+    # but it checks nothing and only returns True
+    
+    # therefore in our is_watermark_applicable we will need to implement additional logic in order to determine if the watermark can be applied to the uploaded pdf
+    
+    # for example, in order to apply the visible watermark, the pdf needs to have pages !!!
+    
+    
+    def is_watermark_applicable(self, pdf: PdfSource, position: str | None = None) -> bool:
 
 
 
 
 
-
+        return False
 
 
