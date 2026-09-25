@@ -44,6 +44,8 @@ from watermarking_method import (
 # Import Tom watermarking method
 from watermarking_method_tom import AuthorFieldWaterMarking
 
+from watermarking_method_theo import watermarking_method_theo
+
 from add_after_eof import AddAfterEOF
 # --------------------
 # Method registry
@@ -53,7 +55,11 @@ METHODS: Dict[str, WatermarkingMethod] = {
     AddAfterEOF.name: AddAfterEOF(),
     
     # Adding in my watermarking method /Tom
-    AuthorFieldWaterMarking.name: AuthorFieldWaterMarking()
+    AuthorFieldWaterMarking.name: AuthorFieldWaterMarking(),
+    
+    #Theos method
+    watermarking_method_theo.name:
+    watermarking_method_theo(),
 }
 """Registry of available watermarking methods.
 

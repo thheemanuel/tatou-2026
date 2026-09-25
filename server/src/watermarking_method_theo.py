@@ -104,6 +104,7 @@ class watermarking_method_theo(WatermarkingMethod):
     # unlike the add_after_eof.py watermarking method we need to encrypt/hash our secret! 
     # so we will need a method for doing just that:
     
+    @staticmethod
     def sign(secret: str, key: str):
         
         
@@ -262,7 +263,7 @@ class watermarking_method_theo(WatermarkingMethod):
             
             #save the watermarking without modifying the id
             
-                return doc.tobytes(no_new_id=True)
+            return doc.tobytes(no_new_id=True)
         
         finally:
         
@@ -285,7 +286,7 @@ class watermarking_method_theo(WatermarkingMethod):
             
             metadata = doc.metadata
             
-            stored_watermark = metadata.get("keywords")
+            stored_watermark = metadata.get("keywords", "") # added empty "" to avoid crash if pdf does not have "keywords" field
             
         finally:
             
