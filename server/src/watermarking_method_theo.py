@@ -124,7 +124,15 @@ class watermarking_method_theo(WatermarkingMethod):
         
         return hex_sign
     
+    # in order to make the visible watermark unique we create this helper function:
     
+    @staticmethod
+    def make_visible_id(secret: str):
+        # create a short unique identifier
+        
+        digest = hashlib.sha256(secret.encode("utf-8")).hexdigest()
+        
+        return digest[:8].upper()
     
     
     # the add_after_eof method includes a method called "is_watermark_applicable"
@@ -186,78 +194,122 @@ class watermarking_method_theo(WatermarkingMethod):
 
 # i want to understand what it is and why it is included at all if it is only ignored later on in methods. (dont have time right now :))
 
-def add_watermark(self, pdf: PdfSource, secret: str, key: str, position: str | None = None) -> bytes:
+    def add_watermark(self, pdf: PdfSource, secret: str, key: str, position: str | None = None) -> bytes:
     
-    if not secret:
-        raise ValueError("Secret must not be empty")
+        if not secret:
+            raise ValueError("Secret must not be empty")
     
-    if not key:
-        raise ValueError("Kay must be not empty")
+        if not key:
+            raise ValueError("Kay must be not empty")
     
     
     # as per previous methods, convert pdf into bytes and open with fitz
     
-    data = load_pdf_bytes(pdf)
+        data = load_pdf_bytes(pdf)
     
-    doc = fitz.open(stream=data, filetype="pdf")
+        doc = fitz.open(stream=data, filetype="pdf")
     
     
     # in order to avoid annoying errors we encapsulate the entire thing in a try -> finally block in order to close the pdf after the whole thing tries running...
     
     
-    try:
+        try:
         
         #part 1, create the invisible watermark
-        signature = self.sign(secret, key)
+            signature = self.sign(secret, key)
         
-        stored_watermark = (self._MARKER + secret + "---" + signature)
+            stored_watermark = (self._MARKER + secret + "---" + signature)
         
         # we need to get to the metadata, we need to retrieve it from the pdf
         
-        metadata = doc.metadata
+            metadata = doc.metadata
         
-        metadata["keywords"] = stored_watermark
+            metadata["keywords"] = stored_watermark
         
         #update the document with our modified metadata
         
-        doc.set_metadata(metadata)
+            doc.set_metadata(metadata)
         
         #part 2, create the visible watermark
         
         #loop through the pages in the pdf
         
-        for page in doc:
+            for page in doc:
             
             # rect is a class used to define and manipulate four-sided rectangular regions on a pdf page. 
             # with this we can add text to the pdf page and "watermark it"
             
-            rect = page.rect
+                rect = page.rect
             
             #it works by creating a rectangle on the pdf and then entering the text within that box
             
-            watermark_rect = fitz.Rect(
+                watermark_rect = fitz.Rect(
                 
                 #left side
-                rect.x0,
+                    rect.x0,
                 #slightly above middle
-                rect.height / 2 - 50,
+                    rect.height / 2 - 50,
                 #right side of the page
-                rect.x1,
+                    rect.x1,
                 #slightly below the middle
-                rect.height / 2 + 50,
-            )
+                    rect.height / 2 + 50,
+                )
             
             # write the text
             
-            page.insert_textbox(watermark_rect, self._VISIBLE_TEXT, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), overlay=True)
+                page.insert_textbox(watermark_rect, self._VISIBLE_TEXT, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), overlay=True)
             
             
             #save the watermarking without modifying the id
             
-            return doc.tobytes(no_new_id=True)
+                return doc.tobytes(no_new_id=True)
         
-    finally:
+        finally:
         
-        doc.close()
+            doc.close()
+            
+            
+            
+    # this read_secret method will need to be reworked, this is a first implementation
+    
+    def read_secret(self, pdf: PdfSource, key: str) -> str:
+        
+        if not key:
+            raise ValueError("Key must not be empty")
+        
+        data = load_pdf_bytes(pdf)
+        
+        doc =fitz.open(stream=data, filetype="pdf")
+        
+        try:
+            
+            metadata = doc.metadata
+            
+            stored_watermark = metadata.get("keywords")
+            
+        finally:
+            
+            doc.close()
+            
+        
+        if not stored_watermark.startswith(self._MARKER):
+            
+            raise SecretNotFoundError("no group 21 watermark was found")
+        
+        payload = stored_watermark[len(self._MARKER):]
+        
+        if "---" not in payload:
+            raise SecretNotFoundError("invalid Group 21 watermark format")
+        
+        secret, stored_signature = payload.rsplit("---", 1)
+        
+        expected_signature = self.sign(secret, key)
+        
+        if not hmac.compare_digest(stored_signature, expected_signature):
+            
+            raise InvalidKeyError("incorrect key for group 21 watermark")
+        
+        
+        return secret
 
 
