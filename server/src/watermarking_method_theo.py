@@ -26,3 +26,43 @@
 # the whole idea is that we use a combination of both these methods.
 
 # idea for future improvement: use stegnography (or whatever it is called) to embed a secret into the image on the pdf. (assuming they have a image... idk).
+
+
+
+
+# to do this (above ^^^^) we need to make some imports
+
+
+# allows python type hinting features (declaring that a variable will be a specific type e.g. list[str])
+from __future__ import annotations
+
+
+# this one is maybe not so important but neverthenless allows me to declare variables I know will never change such as the name of the watermarking method.
+
+from typing import Final
+
+
+# since we will need to verify the secret and stuff like that we need to hash it !! (or use mac, same thing??)
+# so import a standard cryptographic hash function
+
+import hashlib
+import hmac 
+
+
+# use the import used in the watermark_method.py file that was provided at the beginning.
+# it is a python module provided by PyMuPDF and it lets us:
+# open pdfs, read metadata, modify metadata, add text to pdf pages and save pdfs
+
+# the two properties modify metadata and add text to pdf pages will be relevant for our watermarking !!!
+
+
+# since it is useful we will also use stuff provided by tatou
+
+from watermarking_method import (InvalidKeyError, PdfSource, SecretNotFoundError, WatermarkingMethod, load_pdf_bytes)
+
+
+
+
+
+
+
