@@ -53,6 +53,8 @@ import hmac
 # it is a python module provided by PyMuPDF and it lets us:
 # open pdfs, read metadata, modify metadata, add text to pdf pages and save pdfs
 
+import fitz
+
 # the two properties modify metadata and add text to pdf pages will be relevant for our watermarking !!!
 
 
@@ -135,10 +137,38 @@ class watermarking_method_theo(WatermarkingMethod):
     
     def is_watermark_applicable(self, pdf: PdfSource, position: str | None = None) -> bool:
 
+        
+        # in order to catch exceptions we will need to implement the logic within try-catch blocks
+        
+        #we will try two scenarios, one where it does not have any pages, and one where the PyMuPDF couldnt open the data as a pdf.
+        
+        
+        
+        try:
+            
+            data = load_pdf_bytes(pdf)
+            
+            doc = fitz.open(stream=data,filetype="pdf")
+            
+            try:
+                
+                #check if it at least contains one page
+                
+                return doc.page_count > 0
+            
+            finally:
+                
+                doc.close()
+                
+        except Exception:
+            
+            #if it cannot be opened as a pdf, return false, the watermark cannot be applied.
+            return False
 
 
 
 
-        return False
+
+
 
 
