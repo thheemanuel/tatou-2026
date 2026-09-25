@@ -65,4 +65,48 @@ from watermarking_method import (InvalidKeyError, PdfSource, SecretNotFoundError
 
 
 
+# making sure we use the watermarking method interface
+class watermarking_method_theo(WatermarkingMethod):
+    
+    #declare final variables such as name and other stuff, just like it is done in add_after_eof etc.
+    
+    name: Final[str] = "theo_group21"
+    
+    # the name is used when other groups use the api and asks it to use this method.
+    
+    # just like add_after_eof used constants, we are also going to use them.
+    
+    
+    
+    
+    
+    # i am imagining a string in the metadata that begins with "GROUP21 ..."
+    
+    _MARKER: Final[str] = "GROUP21:"
+    
+    # for the diagonal watermarking text
+    _VISIBLE_TEXT: Final[str] = "WATERMARKED BY GROUP 21"
+    
+    
+    @staticmethod
+    def get_usage() -> str:
+        
+        return (
+        """
+        Adds a visible GROUP 21 watermark to every page and stores the secret with an HMAC in pfd metadata, position is currently ignored.
+        
+        """
+            
+        )
+        
+    
+    
+    
+
+
+
+
+
+
+
 
