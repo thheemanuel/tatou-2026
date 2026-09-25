@@ -168,7 +168,96 @@ class watermarking_method_theo(WatermarkingMethod):
 
 
 
+# now is time for the actual application of the watermark, which will happen in some steps.
+
+# we need to begin with basic case handling
+
+# maybe a secret or a key isnt provided, we need to raise or catch that kind of scenario.
 
 
+# then we will add the invisible text to the pdf metadata
+
+# then we will add the visible text to every page in the provided pdf.
+
+
+# then we return the watermarked pdf (as bytes??? per other methods)
+
+# i wonder why the position is always ignored, it is stated that it is because of api compatibility but i will need to look into that later.
+
+# i want to understand what it is and why it is included at all if it is only ignored later on in methods. (dont have time right now :))
+
+def add_watermark(self, pdf: PdfSource, secret: str, key: str, position: str | None = None) -> bytes:
+    
+    if not secret:
+        raise ValueError("Secret must not be empty")
+    
+    if not key:
+        raise ValueError("Kay must be not empty")
+    
+    
+    # as per previous methods, convert pdf into bytes and open with fitz
+    
+    data = load_pdf_bytes(pdf)
+    
+    doc = fitz.open(stream=data, filetype="pdf")
+    
+    
+    # in order to avoid annoying errors we encapsulate the entire thing in a try -> finally block in order to close the pdf after the whole thing tries running...
+    
+    
+    try:
+        
+        #part 1, create the invisible watermark
+        signature = self.sign(secret, key)
+        
+        stored_watermark = (self._MARKER + secret + "---" + signature)
+        
+        # we need to get to the metadata, we need to retrieve it from the pdf
+        
+        metadata = doc.metadata
+        
+        metadata["keywords"] = stored_watermark
+        
+        #update the document with our modified metadata
+        
+        doc.set_metadata(metadata)
+        
+        #part 2, create the visible watermark
+        
+        #loop through the pages in the pdf
+        
+        for page in doc:
+            
+            # rect is a class used to define and manipulate four-sided rectangular regions on a pdf page. 
+            # with this we can add text to the pdf page and "watermark it"
+            
+            rect = page.rect
+            
+            #it works by creating a rectangle on the pdf and then entering the text within that box
+            
+            watermark_rect = fitz.Rect(
+                
+                #left side
+                rect.x0,
+                #slightly above middle
+                rect.height / 2 - 50,
+                #right side of the page
+                rect.x1,
+                #slightly below the middle
+                rect.height / 2 + 50,
+            )
+            
+            # write the text
+            
+            page.insert_textbox(watermark_rect, self._VISIBLE_TEXT, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), overlay=True)
+            
+            
+            #save the watermarking without modifying the id
+            
+            return doc.tobytes(no_new_id=True)
+        
+    finally:
+        
+        doc.close()
 
 
