@@ -275,42 +275,69 @@ class watermarking_method_theo(WatermarkingMethod):
     
     def read_secret(self, pdf: PdfSource, key: str) -> str:
         
+        # make sure a key was actually supplied by the user
+        
+        # if not raise an error
+        
         if not key:
             raise ValueError("Key must not be empty")
+        
+        
+        # just as done in the previous methods, we need to load the pdf bytes and then open the pdf using PyMuPDF
         
         data = load_pdf_bytes(pdf)
         
         doc =fitz.open(stream=data, filetype="pdf")
         
+        #in order to catch exceptions and errors, and that we always need to close the pdf after we have used it, we encapusate in a try-catch or in this case, a try-finally block.
+        
         try:
             
+            # get metadata such as:
+            # title, author, subject, keywords
             metadata = doc.metadata
             
+            # the watermarking method i created puts the secret and the "watermark" in the "keywords" field
             stored_watermark = metadata.get("keywords", "") # added empty "" to avoid crash if pdf does not have "keywords" field
             
         finally:
-            
+            # we have extracted what we need, so the pdf can now be closed to avoid future wierd errors.
             doc.close()
             
-        
+        # now we need to make sure that the extracted watermark was actually ours.
+        # if the watermark does not begin with the marker that we used, it isnt our watermarking method being used
         if not stored_watermark.startswith(self._MARKER):
             
             raise SecretNotFoundError("no group 21 watermark was found")
         
+        # after confirming that the watermark was ours, we can remove the marker in order to work only with the secret and signature that is the watermark.
+        
+        # for example, my watermarking method is stored like this "GROUP21:Group07---abcdef123456"
+        
+        #after the line below, it will be "Group07---abcdef123456"
+        
         payload = stored_watermark[len(self._MARKER):]
         
+        
+        # error handling, if the separation doesnt exist, it wasnt my watermarking method or something else happened.
         if "---" not in payload:
             raise SecretNotFoundError("invalid Group 21 watermark format")
         
+        
+        #separate the secret (groupXX) from the signature "abcdef123456"
         secret, stored_signature = payload.rsplit("---", 1)
         
+        
+        # take the extracted values from the keywords field and calculate the same hmac operation that was used when creating the watermark
         expected_signature = self.sign(secret, key)
         
+        
+        #if not the same, it is incorrect and something has manipulated the watermark or something else has happened, or it isnt our watermarking method.
         if not hmac.compare_digest(stored_signature, expected_signature):
             
             raise InvalidKeyError("incorrect key for group 21 watermark")
         
-        
+        #after confirming everything above, it is confirmed that this is our watermarking method and that this is our secret, we can return the secret.
         return secret
 
 
