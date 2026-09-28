@@ -52,6 +52,50 @@ from conftest import auth_header
 ALICE = {"uid": 1, "login": "alice"}
 BOB = {"uid": 1, "login": "bob"}
 
+# we will need to create a small test pdf and register it as alice's documetn.
+
+# create a temporary folder and path to that folder, create the pdf in that folder (pytest)
+
+def send_alice_document(db_engine, tmp_path):
+    
+    pdf_path = tmp_path / "alice.pdf"
+    
+    # create the tiny pdf
+    
+    # contents are not important for the test
+    
+    pdf_path.write_bytes(
+        b"%PDF-1.4\n"
+        b"% Secrets Alice\n"
+        b"%EOF\n"
+        )
+    
+    
+    # connect to the database in order to write a query inserting the created pdf and alice as the owner (uid = 1)
+    
+    with db_engine.begin() as conn:
+        
+        conn.execute(
+            text(
+                "INSER INTO Documents "
+                "(id, name, path, ownerid, creation, sha256, size) "
+                "VALUES "
+                "(1, 'alice.pdf', :path, :ownerid, "
+                "'2026-01-01', x'00', 40"
+                ),
+            {
+                "path": str(pdf_path),
+                "ownerid": ALICE("uid"),
+            },
+        )
+        
+    # in the case that this is needed somewhere else, return the pdf path
+    return pdf_path
+    
+    
+    
+    
+    
 
 
 
