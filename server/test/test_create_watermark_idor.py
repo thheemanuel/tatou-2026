@@ -81,7 +81,7 @@ def send_alice_document(db_engine, tmp_path):
                 "(id, name, path, ownerid, creation, sha256, size) "
                 "VALUES "
                 "(1, 'alice.pdf', :path, :ownerid, "
-                "'2026-01-01', x'00', 40"
+                "'2026-01-01', x'00', 40)"
                 ),
             {
                 "path": str(pdf_path),
