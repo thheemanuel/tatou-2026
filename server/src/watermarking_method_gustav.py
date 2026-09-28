@@ -42,9 +42,13 @@ from __future__ import annotations
 
 from typing import Final
 
+import hashlib
+import hmac
+
 import fitz  # PyMuPDF
 
 from watermarking_method import (
+    InvalidKeyError,
     PdfSource,
     SecretNotFoundError,
     WatermarkingMethod,
@@ -61,10 +65,27 @@ class InvisibleTextWatermark(WatermarkingMethod):
     # Tag prepended to the hidden text so we can find our payload later.
     _MARKER: Final[str] = "TATOUWM:"
 
+    # Separates secret from signature in the stored payload. sha256 hex
+    # digests never contain "|", and rsplit(..., 1) means even a "|" in
+    # the secret itself still splits correctly from the right.
+    _SEP: Final[str] = "|"
+
+    # Context string bound into the HMAC so a signature from this method
+    # can't be replayed as valid input for a different watermarking method.
+    _CONTEXT: Final[bytes] = b"tatou:invisible-text:v1:"
+
     @staticmethod
     def get_usage() -> str:
         # Pure documentation string surfaced by the CLI; no logic here.
-        return "Embeds the secret as invisible text on the first page. Position is ignored."
+        return "Embeds the secret as invisible text on the first page, signed with an HMAC of the key. Position is ignored."
+
+    @classmethod
+    def _sign(cls, secret: str, key: str) -> str:
+        """HMAC-SHA256 of the secret, keyed by `key`. Proves the secret
+        was written by someone who knew the key, and that it hasn't been
+        tampered with since."""
+        mac = hmac.new(key.encode("utf-8"), cls._CONTEXT + secret.encode("utf-8"), hashlib.sha256)
+        return mac.hexdigest()
 
     def is_watermark_applicable(
         self,
@@ -89,12 +110,20 @@ class InvisibleTextWatermark(WatermarkingMethod):
         key: str,
         position: str | None = None,
     ) -> bytes:
+        if not secret:
+            raise ValueError("Secret must be a non-empty string")
+        if not key:
+            raise ValueError("Key must be a non-empty string")
+
+        signature = self._sign(secret, key)
+        payload = secret + self._SEP + signature
+
         doc = fitz.open(stream=load_pdf_bytes(pdf), filetype="pdf")
         page = doc.load_page(0)
         # The actual watermark: a text-show operation with the PDF `Tr`
         # (text rendering mode) operator set to 3 = invisible. The glyphs
         # are recorded in the content stream but never painted.
-        page.insert_text((0, 10), self._MARKER + secret, fontsize=1, render_mode=3)
+        page.insert_text((0, 10), self._MARKER + payload, fontsize=1, render_mode=3)
         # no_new_id=True stops PyMuPDF from randomizing the trailer /ID
         # on save, which would otherwise break determinism.
         out = doc.tobytes(no_new_id=True)
@@ -102,6 +131,9 @@ class InvisibleTextWatermark(WatermarkingMethod):
         return out
 
     def read_secret(self, pdf: PdfSource, key: str) -> str:
+        if not key:
+            raise ValueError("Key must be a non-empty string")
+
         doc = fitz.open(stream=load_pdf_bytes(pdf), filetype="pdf")
         # get_text() returns invisible-mode glyphs too, since it reads the
         # content stream rather than rendering pixels.
@@ -111,9 +143,17 @@ class InvisibleTextWatermark(WatermarkingMethod):
         idx = text.find(self._MARKER)
         if idx == -1:
             raise SecretNotFoundError("No watermark found")
-        # Everything after the marker is the secret we embedded.
-        return text[idx + len(self._MARKER):].strip()
+        payload = text[idx + len(self._MARKER):].strip()
+
+        if self._SEP not in payload:
+            raise SecretNotFoundError("Watermark payload is malformed")
+        secret, signature = payload.rsplit(self._SEP, 1)
+
+        expected = self._sign(secret, key)
+        if not hmac.compare_digest(signature, expected):
+            raise InvalidKeyError("Provided key failed to authenticate the watermark")
+
+        return secret
 
 
 __all__ = ["InvisibleTextWatermark"]
-

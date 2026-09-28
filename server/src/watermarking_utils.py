@@ -46,6 +46,8 @@ from watermarking_method_tom import AuthorFieldWaterMarking
 
 from watermarking_method_theo import watermarking_method_theo
 
+from watermarking_method_gustav import InvisibleTextWatermark
+
 from add_after_eof import AddAfterEOF
 # --------------------
 # Method registry
@@ -60,7 +62,11 @@ METHODS: Dict[str, WatermarkingMethod] = {
     #Theos method
     watermarking_method_theo.name:
     watermarking_method_theo(),
+
+    #Gustavs method
+    InvisibleTextWatermark.name: InvisibleTextWatermark(),
 }
+
 """Registry of available watermarking methods.
 
 Keys are human-readable method names (stable, lowercase, hyphenated)
