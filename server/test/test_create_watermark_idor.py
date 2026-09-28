@@ -127,6 +127,10 @@ def test_create_watermark_enforces_document_ownership(client, db_engine, tmp_pat
         # alice sends a request to create a watermark on document 1, which belongs to alice, so the ownership check should allow her request to continue.
         
     alice_response = client.post("/api/create-watermark/1", headers=auth_header(**ALICE), json=payload)
+    
+    #debugging
+    print("Alice status:", alice_response.status_code)
+    print("Alice response:", alice_response.get_json())
         
         #this should successfully create the watermark
     assert alice_response.status_code == 201
