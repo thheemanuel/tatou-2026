@@ -93,7 +93,52 @@ def send_alice_document(db_engine, tmp_path):
     return pdf_path
     
     
+    # create the test method itself
     
+    # verify that the create watermark endpoint can distinguish between the owner aof a document and another authenticated user.
+    
+    # the test should/will? have two main parts
+    
+    # 1. alice tries the operation, she owns the document so she should be allowed.
+    
+    # 2. bob tries the same operation on the same document, he does not own it so he should be rejected.
+    
+    
+    def test_create_watermark_enforces_document_ownership(client, db_engine, tmp_path):
+        
+        
+        # create documetn 1 and make alice its owner
+        send_alice_document(db_engine, tmp_path)
+        
+        
+        # we now need the payload that is going to be sent to the endpoint and for that we need to build a json body
+        
+        # this payload will be used by both alice and bob since both of them are going to use the exact same operation on the exact same document
+        
+        payload = {
+            "method": "toy-eof",
+            "intended_for": "example@example.com",
+            "position": "eof",
+            "secret": "alice-secret",
+            "key": "test-key",
+            }
+        
+        
+        # alice sends a request to create a watermark on document 1, which belongs to alice, so the ownership check should allow her request to continue.
+        
+        alice_response = client.post("/api/create-watermark/1", headers=auth_header(**ALICE), json=payload)
+        
+        #this should successfully create the watermark
+        assert alice_response.status_code == 201
+        
+        #now do exactly the same for bob
+        bob_response = client.post("/api/create-watermark/1", headers=auth_header(**BOB), json=payload)
+        
+        
+        assert bob_response.status_code == 404
+        
+        #gather more information, check the response body as well
+        assert bob_response.json == {"error": "document not found"}
     
     
 
