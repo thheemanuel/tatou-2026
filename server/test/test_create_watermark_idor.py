@@ -50,7 +50,7 @@ from conftest import auth_header
 # their user ids must be different because tatou uses the user's uid when checking document ownership
 
 ALICE = {"uid": 1, "login": "alice"}
-BOB = {"uid": 1, "login": "bob"}
+BOB = {"uid": 2, "login": "bob"}
 
 # we will need to create a small test pdf and register it as alice's documetn.
 
