@@ -75,6 +75,27 @@ def send_alice_document(db_engine, tmp_path):
     
     with db_engine.begin() as conn:
         
+        # this turned out to be the problem, we need to create a Versions table for the new pdf
+        
+        # it is needed by create watermark???
+        
+        conn.execute(
+        text(
+            """
+            CREATE TABLE Versions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                documentid INTEGER,
+                link TEXT,
+                intended_for TEXT,
+                secret TEXT,
+                method TEXT,
+                position TEXT,
+                path TEXT
+            )
+            """
+        )
+    )
+        
         conn.execute(
             text(
                 "INSERT INTO Documents "
