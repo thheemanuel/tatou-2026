@@ -77,7 +77,7 @@ def send_alice_document(db_engine, tmp_path):
         
         conn.execute(
             text(
-                "INSER INTO Documents "
+                "INSERT INTO Documents "
                 "(id, name, path, ownerid, creation, sha256, size) "
                 "VALUES "
                 "(1, 'alice.pdf', :path, :ownerid, "
@@ -85,7 +85,7 @@ def send_alice_document(db_engine, tmp_path):
                 ),
             {
                 "path": str(pdf_path),
-                "ownerid": ALICE("uid"),
+                "ownerid": ALICE["uid"],
             },
         )
         
