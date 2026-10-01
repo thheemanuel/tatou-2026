@@ -7,8 +7,7 @@ connects them to threats and verification evidence.
 
 ### Requirement
 
-Documents and document-related operations must only be accessible
-to the authenticated owner of the document.
+Documents and document-related operations must only be accessible to the authenticated owner of the document.
 
 Source:
 
@@ -17,8 +16,7 @@ Source:
 
 ### Threat
 
-An authenticated user attempts to access or perform operations on
-a document belonging to another authenticated user.
+An authenticated user attempts to access or perform operations on a document belonging to another authenticated user.
 
 For the assurance assignment this is described as T.CROSS_USER.
 
