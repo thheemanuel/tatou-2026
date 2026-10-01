@@ -220,6 +220,11 @@ class watermarking_method_theo(WatermarkingMethod):
             signature = self.sign(secret, key)
         
             stored_watermark = (self._MARKER + secret + "---" + signature)
+            
+        # create a short visible identifier derived from the secret
+        
+            visible_id = self.make_visible_id(secret)
+            visible_text = f"{self._VISIBLE_TEXT} - ID: {visible_id}"
         
         # we need to get to the metadata, we need to retrieve it from the pdf
         
@@ -258,7 +263,7 @@ class watermarking_method_theo(WatermarkingMethod):
             
             # write the text
             
-                page.insert_textbox(watermark_rect, self._VISIBLE_TEXT, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), overlay=True)
+                page.insert_textbox(watermark_rect, visible_text, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), overlay=True)
             
             
             #save the watermarking without modifying the id
