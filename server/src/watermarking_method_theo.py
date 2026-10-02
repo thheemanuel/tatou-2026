@@ -120,7 +120,7 @@ class watermarking_method_theo(WatermarkingMethod):
     # the secret itself is NOT encrypted or hidden by this operation.
     
     @staticmethod
-    def sign(secret: str, key: str):
+    def compute_hmac(secret: str, key: str):
         
         
         # creating a cryptographic signature for the secret
@@ -230,7 +230,7 @@ class watermarking_method_theo(WatermarkingMethod):
         try:
         
         #part 1, create the invisible watermark
-            authentication_tag = self.sign(secret, key)
+            authentication_tag = self.compute_hmac(secret, key)
         
             stored_watermark = (self._MARKER + secret + "---" + authentication_tag)
             
@@ -347,7 +347,7 @@ class watermarking_method_theo(WatermarkingMethod):
         
         
         # take the extracted values from the keywords field and calculate the same hmac operation that was used when creating the watermark
-        expected_tag = self.sign(secret, key)
+        expected_tag = self.compute_hmac(secret, key)
         
         
         #if not the same, it is incorrect and something has manipulated the watermark or something else has happened, or it isnt our watermarking method.
