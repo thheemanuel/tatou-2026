@@ -138,11 +138,14 @@ class watermarking_method_theo(WatermarkingMethod):
         
         return mac.hexdigest()
     
-    # in order to make the visible watermark unique we create this helper function:
+    # create a short identifier derived from the secret for use
+    # in the visible watermark.
     
     @staticmethod
     def make_visible_id(secret: str):
-        # create a short unique identifier
+        # use the first eight hexadecimal characters of the sha256 digest.
+        # this is compact, but collisions are possible, so it is not
+        # guaranteed to be unique.
         
         digest = hashlib.sha256(secret.encode("utf-8")).hexdigest()
         
