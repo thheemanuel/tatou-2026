@@ -343,15 +343,15 @@ class watermarking_method_theo(WatermarkingMethod):
         
         
         #separate the secret (groupXX) from the signature "abcdef123456"
-        secret, stored_signature = payload.rsplit("---", 1)
+        secret, stored_tag = payload.rsplit("---", 1)
         
         
         # take the extracted values from the keywords field and calculate the same hmac operation that was used when creating the watermark
-        expected_signature = self.sign(secret, key)
+        expected_tag = self.sign(secret, key)
         
         
         #if not the same, it is incorrect and something has manipulated the watermark or something else has happened, or it isnt our watermarking method.
-        if not hmac.compare_digest(stored_signature, expected_signature):
+        if not hmac.compare_digest(stored_tag, expected_tag):
             
             raise InvalidKeyError("incorrect key for group 21 watermark")
         
