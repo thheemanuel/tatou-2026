@@ -49,9 +49,15 @@ from __future__ import annotations
 from typing import Final
 
 
-# since we need to verify that the stored secret has not been modified,
-# we use an HMAC. unlike a normal hash, an HMAC also uses a secret key.
-# SHA-256 will be used as the hash function inside the HMAC.
+# we use hmac-sha256 to authenticate the stored secret.
+# sha-256 is the hash function used inside hmac, while hmac also
+# incorporates a secret key.
+#
+# this allows read_secret() to detect an incorrect key or a modified
+# secret/authentication tag.
+
+import hashlib
+import hmac
 
 import hashlib
 import hmac 
