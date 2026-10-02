@@ -279,7 +279,7 @@ class watermarking_method_theo(WatermarkingMethod):
             
             # write the text
             
-                page.insert_textbox(watermark_rect, visible_text, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), overlay=True)
+                page.insert_textbox(watermark_rect, visible_text, fontsize=30, fontname="helv", align=fitz.TEXT_ALIGN_CENTER, color=(0.7, 0.7, 0.7), rotate=90, overlay=True)
             
             
             #save the watermarking without modifying the id
