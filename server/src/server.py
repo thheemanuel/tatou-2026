@@ -824,8 +824,8 @@ def create_app():
         if not plugin_path.exists():
             return jsonify({"error": "plugin file not found"}), 404
 
-        # Unpickle the object (dill if available; else std pickle)
-        # Unpickle with the restricted loader (blocks code-execution payloads)
+        # Deserialize the plugin using the restricted unpickler.
+        # The loader only permits the classes/modules explicitly allowed by SafeUnpickler.
         try:
             with plugin_path.open("rb") as f:
                 obj = SafeUnpickler(f).load()
