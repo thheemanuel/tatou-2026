@@ -230,9 +230,9 @@ class watermarking_method_theo(WatermarkingMethod):
         try:
         
         #part 1, create the invisible watermark
-            signature = self.sign(secret, key)
+            authentication_tag = self.sign(secret, key)
         
-            stored_watermark = (self._MARKER + secret + "---" + signature)
+            stored_watermark = (self._MARKER + secret + "---" + authentication_tag)
             
         # create a short visible identifier derived from the secret
         
