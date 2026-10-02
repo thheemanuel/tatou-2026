@@ -39,6 +39,10 @@ from __future__ import annotations
 
 # this one is maybe not so important but neverthenless allows me to declare variables I know will never change such as the name of the watermarking method.
 
+# final is a type hint used to indicate that a value is intended
+# not to be reassigned. this can be checked by static type checkers,
+# but python does not enforce it at runtime.
+
 from typing import Final
 
 
