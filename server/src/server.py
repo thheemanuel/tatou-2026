@@ -572,11 +572,10 @@ def create_app():
                 or request.args.get("documentid")
                 or (request.is_json and (request.get_json(silent=True) or {}).get("id"))
             )
-        try:
+        
             # CWE-89 fix: cast to int so non-numeric input never reaches a query.
-            doc_id = int(document_id)
-        except (TypeError, ValueError):
-            return jsonify({"error": "document_id (int) is required"}), 400
+        doc_id = int(document_id)
+        
 
         # Fetch the document (enforce ownership)
         try:
