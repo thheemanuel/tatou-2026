@@ -573,7 +573,7 @@ def create_app():
                 or (request.is_json and (request.get_json(silent=True) or {}).get("id"))
             )
         
-            # CWE-89 fix: cast to int so non-numeric input never reaches a query.
+        # CWE-89 fix: cast to int so non-numeric input never reaches a query.
         doc_id = int(document_id)
         
 
@@ -1193,17 +1193,12 @@ def create_app():
         # a lot of things can go wrong, lets try to catch all of them
         
         except RMAPError as e:
-            
             app.logger.warning("RMAP authentication failed: %s", e)
-            
-        except FileExistsError:
-            
             return jsonify({
-                "error": "RMAP link already used"
+                "error": "RMAP authentication failed"
             }), 401
-            
+
         except FileExistsError:
-            
             return jsonify({
                 "error": "RMAP link already used"
             }), 409
