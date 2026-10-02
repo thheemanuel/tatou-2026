@@ -33,7 +33,10 @@
 # to do this (above ^^^^) we need to make some imports
 
 
-# allows python type hinting features (declaring that a variable will be a specific type e.g. list[str])
+# postpone evaluation of type annotations.
+# this is useful for type hints that refer to types that may not yet
+# have been evaluated when the function or class is defined.
+
 from __future__ import annotations
 
 
