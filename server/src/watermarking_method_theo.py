@@ -42,8 +42,9 @@ from __future__ import annotations
 from typing import Final
 
 
-# since we will need to verify the secret and stuff like that we need to hash it !! (or use mac, same thing??)
-# so import a standard cryptographic hash function
+# since we need to verify that the stored secret has not been modified,
+# we use an HMAC. unlike a normal hash, an HMAC also uses a secret key.
+# SHA-256 will be used as the hash function inside the HMAC.
 
 import hashlib
 import hmac 
@@ -101,8 +102,9 @@ class watermarking_method_theo(WatermarkingMethod):
             
         )
         
-    # unlike the add_after_eof.py watermarking method we need to encrypt/hash our secret! 
-    # so we will need a method for doing just that:
+    # unlike the add_after_eof.py watermarking method, we also want to verify
+    # the integrity/authenticity of the stored secret using an HMAC.
+    # the secret itself is NOT encrypted or hidden by this operation.
     
     @staticmethod
     def sign(secret: str, key: str):
