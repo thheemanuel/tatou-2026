@@ -134,11 +134,9 @@ class watermarking_method_theo(WatermarkingMethod):
         
         # now we calculate the hmac !
         
-        signature = hmac.new(key_b, secret_b, hashlib.sha256)
+        mac = hmac.new(key_b, secret_b, hashlib.sha256)
         
-        hex_sign = signature.hexdigest()
-        
-        return hex_sign
+        return mac.hexdigest()
     
     # in order to make the visible watermark unique we create this helper function:
     
