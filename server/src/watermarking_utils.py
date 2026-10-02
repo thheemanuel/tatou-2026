@@ -118,7 +118,7 @@ def is_watermarking_applicable(
     pdf: PdfSource,
     position: str | None = None,
 ) -> bytes:
-    """Apply a watermark using the specified method and return new PDF bytes."""
+    """Return whether the specified watermarking method can be applied to the PDF."""
     m = get_method(method)
     return m.is_watermark_applicable(pdf=pdf, position=position)
 
