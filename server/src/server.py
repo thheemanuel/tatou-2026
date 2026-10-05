@@ -153,7 +153,7 @@ def create_app():
     
     request_log = defaultdict(list)
     request_limit_count = 30000
-    time_limit_window = 60
+    time_limit_window = 60000
     
     @app.before_request
     def timeRate_limit():
