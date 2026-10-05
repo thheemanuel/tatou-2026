@@ -152,7 +152,7 @@ def create_app():
     # Define variables for allowed amount of requests within a certain time limit
     
     request_log = defaultdict(list)
-    request_limit_count = 3000
+    request_limit_count = 30000
     time_limit_window = 60
     
     @app.before_request
