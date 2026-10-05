@@ -151,35 +151,35 @@ def create_app():
     # Depending on ip adress, have a list of all recent request times
     # Define variables for allowed amount of requests within a certain time limit
     
-    #request_log = defaultdict(list)
-    #request_limit_count = 300
-    #time_limit_window = 60
+    request_log = defaultdict(list)
+    request_limit_count = 3000
+    time_limit_window = 60
     
-    #@app.before_request
-    #def timeRate_limit():
+    @app.before_request
+    def timeRate_limit():
         # First make it so that we dont limit the amount of times 
         # healthz is called. Should be unaffected here
-        #if request.path == "/healthz":
-            #return
+        if request.path == "/healthz":
+            return
         
         # Get the address for the one that sent the requests
         # And create this ips own personal list of request timestamps
-        #ip = request.remote_addr
-        #now = time.time()
-        #timestamps = request_log[ip]
+        ip = request.remote_addr
+        now = time.time()
+        timestamps = request_log[ip]
        
         # Go through the list and remove anything that is outside of our time window,
         # we only care about what happens within the time limit window
-        #while timestamps and timestamps[0] < now - time_limit_window:
-            #timestamps.pop(0)
+        while timestamps and timestamps[0] < now - time_limit_window:
+            timestamps.pop(0)
         
         # If they already have the amount of requests allowed within the time limit,
         # send then an error message and stop here. This is just done so that unwanted users need to wait longer
-        #if len(timestamps) >= request_limit_count:
-            #return jsonify({"error": "too many request done, please slow down from now on!"}), 429
+        if len(timestamps) >= request_limit_count:
+            return jsonify({"error": "too many request done, please slow down from now on!"}), 429
         
         # If we are within the time limit, this is most likely a legit user then they can proceed
-        #timestamps.append(now)
+        timestamps.append(now)
     
     # --- Routes ---
     @app.route("/<path:filename>")
