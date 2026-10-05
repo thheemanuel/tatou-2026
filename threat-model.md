@@ -29,3 +29,36 @@ The following components are in scope:
 - security logging and monitoring
 
 Third-party components such as flask, mariadb, docker and pdf processing libraries are not threat modeled internally. However, their configuration and the way Tatou interacts with them are within scope.
+
+## 2. System overview
+
+# AI generated diagram over the system
+
+                    Course network
+                         |
+          +--------------+--------------+
+          |                             |
+       Web/API                       RMAP client
+       clients                      (other groups)
+          |                             |
+          +--------------+--------------+
+                         |
+                  +------v------+
+                  | Tatou/Flask |
+                  +------+------+
+                         |
+             +-----------+-----------+
+             |                       |
+             v                       v
+          MariaDB                PDF storage
+                                     |
+                                     v
+                               Watermarking
+
+                  RMAP ---- OpenPGP keys
+
+               ===== Docker boundary =====
+
+                       Host VM
+
+## 3. Assets
