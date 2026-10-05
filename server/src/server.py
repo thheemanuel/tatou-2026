@@ -151,12 +151,12 @@ def create_app():
     # Depending on ip adress, have a list of all recent request times
     # Define variables for allowed amount of requests within a certain time limit
     
-    request_log = defaultdict(list)
-    request_limit_count = 30000
-    time_limit_window = 60000
+    #request_log = defaultdict(list)
+    #request_limit_count = 300
+    #time_limit_window = 60
     
-    @app.before_request
-    def timeRate_limit():
+    #@app.before_request
+    #def timeRate_limit():
         # First make it so that we dont limit the amount of times 
         # healthz is called. Should be unaffected here
         if request.path == "/healthz":
