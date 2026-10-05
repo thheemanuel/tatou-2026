@@ -62,3 +62,28 @@ Third-party components such as flask, mariadb, docker and pdf processing librari
                        Host VM
 
 ## 3. Assets
+
+Important assets include:
+
+- original confidential pdf documents
+- individually watermarked pdf documents
+- watermark secrets and attribution information
+- user accounts
+- authentication credentials and bearer tokens
+- secret document download links
+- user and document metadata stored in database
+- rmap server private-key material
+- trusted rmap client public keys
+- the three flags
+- security logs used for monitoring and incident investigation
+- availability of the service
+
+Confidentiality is especially important for documents, credentials, secret links, private keys and flags, for example.
+
+Integrity is important for document ownership, watermark attribution, database info, rmap identities and security logs.
+
+Availability is important because tatou must remain operational during the project.
+
+## 4. Threats
+
+...
