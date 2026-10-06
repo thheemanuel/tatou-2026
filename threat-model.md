@@ -387,4 +387,102 @@ Relevant observation points include:
 
 ## 7. Implications for monitoring
 
-...
+The threat analysis provides the basic for deciding what tatou should log and monitor.
+
+The journal of project event demonstrates why this is necessary. During previous incidents, the group was able to identify suspicious behavior through application and database state, but the events were not necessarily represented as dedicated security information/telemetry.
+
+The goal of the monitoring operations is therefore not simply to produce more logs. It is to make security relevant behavior visible enough that an attack can be detected and reconstructed.
+
+The initial application level observation points should include:
+
+- successful authentication
+- failed authentication
+- failed authorization and ownership checks
+- document upload failures
+- pdf processing failures
+- plugin loading attempts
+- rejected plugin paths
+- deserialization failures
+- successful plugin registration
+- secret-link access
+- invalid secret-link access
+- RMAP authentication success and failure
+- RMAP protocol failures
+- important document/database state changes
+- unexpected application exceptions
+- unexpected filesystem failures
+
+Useful event field may therefore include for example:
+
+- timestamp
+- event type
+- request identifier
+- source address
+- authenticated user identifier
+- operation
+- resource type
+- resource identifier
+- outcome
+- safe failure category
+
+Application logs alone are not sufficient for all identified threats.
+
+Important security information should be stored outside the tatou application container so that evidence is more likely to survive an application or container compromise.
+
+## 8. Detection priorities
+
+The first monitoring implementation should focus on a small number of
+high-value detections rather than attempting to detect every possible
+attack immediately:
+
+- Repeated authorization failures
+- Suspicious plugin activity
+- Authentication failures
+- SQL/database errors caused by request input
+- Secret-link proving
+- rmap authentication failures
+- Application or container instability
+
+## 9. Recovery considerations
+
+Detection alone is not sufficient. The operational security process must also support recovery after an incident.
+
+Recovery procedures should be prepared for at least:
+
+- flag compromise
+- account or bearer-token compromise
+- confidential document disclosure
+- application/container compromise
+- RMAP private-key compromise
+- database or persistent-data corruption
+- service failure
+
+Detect -> investigate -> determine impact -> contain -> fix / remove cause -> rotate affected secrets if necessary -> redeploy / restore -> verify -> document lessons learned.
+
+## 10. Limitations
+
+This threat model does not prove that tatou is secure.
+
+STRIDE provides a structured method for reasoning about threats, but is does not guarantee that every vulnerability will be discovered.
+
+The model is also influenced by incidents already experienced by the group. This is useful because it grounds the analysis in real evidence, but it creates a risk of focusing too heavily on attacks that have already occurred while overlooking new attack paths.
+
+Monitoring itself has limitations.
+
+An attacker using a valid stolen bearer token may appear to the application as the legitimate user.
+
+Changes made to a watermarked pdf after it has been downloaded occur outside the tatou server and cannot normally be observed through monitoring the server.
+
+A sufficiently serious application or container compromise may allow an attacker to interfere with local application logging.
+
+RMAPs cryptography intentionally protects/limits what can be observed.
+
+Monitoring can provide evidence of attempted exploitation, but it should
+not replace preventive controls. For example, rate limiting may reduce
+the speed of enumeration but does not make a predictable secret
+unpredictable, and logging SQL errors does not replace parameterized
+queries.
+
+For these reasons, the threat model should remain a living document and
+be updated as implementation review, testing, monitoring, and future
+attack attempts provide new evidence.
