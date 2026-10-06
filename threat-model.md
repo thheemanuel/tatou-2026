@@ -1,7 +1,7 @@
 # Tatou Threat Model
 
-Verison: 0.1
-Status: Initial threat model
+Verison: 0.2
+Status: Initial threat model informed by implementation ewview and observed project events
 Method/Framework: STRIDE
 
 ## 1. Purpose and scope
@@ -135,3 +135,74 @@ Important attack surfaces include:
 These areas either accept untrusted input or provide access to security sensitive areas or resources.
 
 ## 6. Identified threats
+
+The following threats were identified by applying STRIDE to tatous main components, assets, trust boundaries, and data flows.
+
+The threat model also incorporates evidence collected during development and operation of our tatou instance (deployement). Where a vulnerability has previously been confirmed, this is stated. Other entries represent credible threats that still require further verification or monitoring.
+
+### T1. Cross-user document access
+
+STRIDE: Information Disclosure / Elevation of Privilege
+Priority: High
+Status: Previously vulnerable; mitigation implemented and tested
+
+Tatou contains documents belonging to different authenticated users. A malicious authenticated user may attempt to access or operate on another users document by supplying its document identifier.
+
+SUccessful authentication does not impy authorixation to every document. Every operation involving a document must also verify that the resource belong to the authenticated user.
+
+This threat was previously confirmed in our implementation.
+
+delete-document, create-watermark and read-watermark originally looked up documents by their documet id without verifying that the document belonged to the requesting user.
+
+The affected operations were changed to include the authenticated users id when looking up documents.
+
+Altough the known vulnerabilities have been mitigated, authorization remains an important observation point.
+
+Failed ownership checks should be observable.
+
+### T2. Unsafe plugin loading and deserialization
+
+STRIDE: Tampering / Elevation of Privilege
+Priority: Critical
+Status: Attack activity observed; mitigations implemented
+
+Tatou supports dynamically loaded watermarking functionality. Loading serialized Python obejcts from attacker controlled input creates a particularly dangerous trust boundary because unsafe deserialization can cause behavior beyond the intended watermarking functionality.
+
+Following a flag getting stolen by another group, automated activity was observed that repeatedly created an account and uploaded a file named "x.pkl". The behaviour appeared to target the unsafe pickle plugin functionality.
+
+Also, an unsafe watermarking method that was exposed to users was removed from the available method registry. Additional defenses were later introduced around plugin loading, including path validation and restricted deserialization.
+
+The fact that this attack class has already been observed makes plugin activity a high-value monitoring target.
+
+Relevant events include:
+
+- attempts to load a plugin
+- rejected plugin filenames or paths
+- deserialization failures
+- rejected serialized objects
+- successful plugin registration
+- repeated suspicious file uploads
+
+These events should include authenticated identity, source, opeartion, and outcome where available. (Except for the situation where sentitive or personal information is included).
+
+### T3. SQL injection through API parameters
+
+STRIDE: Information Disclosure / Tampering / Elevation of Privilege
+Priority: High
+Status: Confirmed vulnerability; known instance mitigated
+
+Tatou interacts with MariaDB using values originating from http requests.
+
+A previous implementation of "delete-document" constructed a database query using string concatenation with the supplied document identifier. This allowed attacker controlled input to influence the SQL statement instead of being treated exclusively as data.
+
+The vulnerable query was changed to use a parameterized query.
+
+SQL injection can have consequences beyond the endpoint containing the vulnerability. Depending on the query and database permissions, it may allow an attacker to disclose databse information, modify application state, bypass application assumptions, or obtain information useful for another stage of an attack.
+
+All databse operations involving attacker controlled input should therefore user parameterized queries.
+
+Monitoring is a secondary control for this threat. Preventing injection through safe query construction remains the primary defense.
+
+### T4. Path traversal and unintended filesystem access
+
+...
