@@ -205,4 +205,186 @@ Monitoring is a secondary control for this threat. Preventing injection through 
 
 ### T4. Path traversal and unintended filesystem access
 
+STRIDE: Information disclosure / Tampering / Elevation of Privilege
+Priority: High
+Status: Known attack path; mitigation implemented for plugin loading
+
+Tatou stores and processes uploaded documents and plugins using the filesystem.
+
+If attacker controlled filenames or paths are resolved without ensuring that they remain within the intended directory, path components such as "../" may cause the application to access files outside the directory.
+
+This becomes particularly dangerous when combined with plugin loading. A file uploaded thorugh one part of the application must not become loadable as executable plugin functionality merely by referencing its location using path traversal.
+
+A path traversal guard has been introduced around plugin loading. However, other filesystem operations should still be reviewed to ensure the equivalent assumptions are enforced consistently.
+
+Security relevant events include rejected traversal attempts and references to files outside an expected directory.
+
+### T5. Account compromise thorugh authentication attacks
+
+STRIDE: Spoofing
+Priority: High
+Status: Ongoing threat
+
+An unauthenticated attacker may repeatedly attempt to log in using
+different credentials in order to gain access to an existing tatou
+account.
+
+If an account is compromised, the attacker may gain access to the
+victim's authenticated functionality and documents.
+
+Authentication activity should therefore be observable. Both failed and
+successful authentication attempts may be useful during an investigation.
+
+Repeated authentication failures from one source, or repeated failures
+against one account, may indicate credential guessing.
+
+Passwords and bearer tokens must never be written to security logs.
+
+### T6. Unauthorized access through secret document links
+
+STRIDE: Information Disclosure
+Priority: High
+Status: Requires continued review
+
+Tatou allows generated document versions to be retrieved using secret links.
+
+Possession of such a link acts as a capability to retrieve the corresponding document. Anyone who obtains a valid link may therefore be able to access the document without following the normal authenticated document workflow.
+
+An attacker may attempt to obtain such a link though disclosure, prediction, enumeration, or resuse.
+
+The predictability of identifiers or filenames is relevant here. Rate limiting may make large scale guessing more difficult, but does not correct an underlying predictability problem if the value itself remains guessable. Unpredictable random values are preferable where secrecy of the identifier is part of the access control mechanism.
+
+Successful and unsuccessful access to secret document links should provide sufficient evidence for investigation. (The complete secret link must not be stored in the log).
+
+### T7. Unauthorized or invalid rmap authentication
+
+STRIDE: Spoofing / Information Disclosure
+Priority: High
+Status: Requires continued verification and monitoring
+
+RMAP is used to authenticate other course groups before providing access to an individually watermarked version of the assigned confidential document.
+
+An unauthorized client may attempt to impersonate an accepted identity, send malformed protocol messages, replay protocol information, or otherwise complete the exchange without satisfying the intended authentication requirements.
+
+Only identities whose public keys are configured as trusted should be accepted.
+
+Failed RMAP authentication, unknowning identities, and protocol errors are therefore important observation points.
+
+Successful RMAP authentication should also be recorded so that document distribution can later be associated with an authenticated rmap identity.
+
+Monitoring must, of course, not expose sensitive information.
+
+### T8. Exposure of the rmap private key
+
+STRIDE: Information Disclosure / Spoofing
+Priority: High
+Status: Preventinve control required
+
+The rmap server private key represents the cryptographic identity of our tatou rmap server.
+
+Disclosure of this key could undermine the authentication properties of rmap and may allow another party to impersonate the server.
+
+The private key must therefore be protected from accidental inclusion in source control and other inappropriate or unncessary exposure.
+
+### T9. Malicious or malformed pdf processing
+
+STRIDE: Tampering / Denial of Service
+Priority: Medium
+Status: Ongoing threat
+
+Uploaded pdfs across an important trust boundary. Their contents are controlled by users but are subsequently processed by tatou and its pdf and watermarking functionality.
+
+Malformed or deliberately unusual pdfs may trigger errors or expensive processing. Depending on the implementation, this could result in failed watermark operations, application exceptions, exessive resource consumption, or service instability.
+
+File type and document validation are therefore importatnt preventive controls.
+
+Rejected uploads and unexpected pdf-processing failures should also be observable.
+
+### T10. Application or container compromise
+
+STRIDE: Elevation of Privilege / Information Disclosure
+Priority: Critical
+Status: Previously relevant to an actual flag compromise
+
+A vulnerability that gives an attacker broad file access or code execution inside the tatou application/container could expose several assets simultaneously.
+
+These assets may include:
+
+- confidential pdfs
+- application configuration
+- database credentials
+- rmap key material
+- course flags
+
+This is particularly relevant because the project has already experienced flag compromise. It must therefore be treated as an operational scenario, not merely as a theoretical worst case.
+
+Application logs alone may become unreliable after a sufficiently serious compromose. An attacker with enough access may be able to modify or delete local evidence. Important security telemetry should therefore be persisted or collected outside the tatou application container where practical.
+
+### T11. Destruction or modification of security evidence
+
+STRIDE: Tampering / Repudiation
+Priority: Medium
+Status: Mnitoring design requirement
+
+An attacker who compromises tatou may attempt to remove or modify logs that describe the attack.
+
+Important information regarding the security events within the service should therefore be persisted outside the application container.
+
+The monitoring system should also make it possible to identify when info unexpectedly stops arriving.
+
+### T12. Sensitive information leaked through security logging
+
+STRIDE: Information Disclosure
+Priority: High
+Status: Monitoring design requirement
+
+Introducing additional security logging creates a new security risk.
+
+Careless logging of complete http requests, headers, urls, exception information, database queries, or rmap messages could expose sensitive information.
+
+Security logging should therefore use explicitly selected fields rather than storing complete requests.
+
+The following information must not intentionally be written to security logs:
+
+- passwords
+- bearer tokens
+- rmap private key material
+- watermark secrets
+- complete secret document links
+- document contents
+
+Should be tested to confirm above.
+
+### T13. Resource exhaustion and loss of availability
+
+STRIDE: Denial of Service
+Priority: Medium
+Status: Ongoing operational threat
+
+Tatou performs operations that may consume significant resources,
+including PDF parsing, watermark generation, filesystem storage, plugin
+processing, and database access.
+
+The course rules prohibit intentional destructive or disruptive attacks
+such as denial-of-service attacks. Resource exhaustion is nevertheless
+relevant operationally because it may result from malformed input,
+implementation defects, unexpected workloads, or non-destructive attack
+activity.
+
+Rate limiting may reduce some forms of repeated request activity, but it
+should not be treated as a substitute for fixing the underlying
+vulnerability.
+
+Relevant observation points include:
+
+- application error rate
+- processing time
+- container restarts
+- disk usage
+- cpu usage
+- memory usage
+- unusual request volume
+
+## 7. Implications for monitoring
+
 ...
