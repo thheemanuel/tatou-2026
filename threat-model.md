@@ -486,3 +486,8 @@ queries.
 For these reasons, the threat model should remain a living document and
 be updated as implementation review, testing, monitoring, and future
 attack attempts provide new evidence.
+
+Finally, future attacks or suspicious activity observed during operation
+should be compared with this threat model. New attack paths should result
+in updates to the model, monitoring implementation, and recovery
+procedures where appropriate.
