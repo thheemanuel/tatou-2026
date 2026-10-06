@@ -84,6 +84,54 @@ Integrity is important for document ownership, watermark attribution, database i
 
 Availability is important because tatou must remain operational during the project.
 
-## 4. Threats
+## 4. Threats (threat actors)
 
-...
+# 4.1 Unathuenticated network user
+
+- An unauthenticated network user can interact with publicly accessible tatou endpoints but does not possess legit tatou credentials.
+
+# 4.2 Malicious authenticated user
+
+- A malicious authenticated user has a legit tatou account and authentication token.
+
+# 4.3 Other course groups
+
+- Other course groups are legitimate participants in the project and may possess rmap identities that are trusted by our deployment.
+
+# 4.4 Attacker with compromised credentials
+
+- An attacker may obtain a password, bearer token, secret document link, or other credentials belonging to a legitimate user.
+
+## 5. Attack surface
+
+The main trust boundary exists between the course network and the tatou application.
+
+Data received through http requests must be considered to be untrusted. This includes authentication information, json data, document identifiers, uploaded pdfs, watermark parameters, secret links, and rmap messages.
+
+More trust boundaries exist between:
+
+- tatou and mariadb
+- tatou and the document filesystem
+- tatou and the watermarking subsystem
+- tatou and the rmap/openpgpg key material
+- the tatou container and the host vm.
+
+Important attack surfaces include:
+
+- account creation
+- login
+- bearer token authentication
+- authenticated document endpoints
+- document identifiers
+- pdf upload and processing
+- watermark creation and extraction
+- public secret-link retrieval
+- rmap authentication
+- filesystem operations
+- database operations
+- watermarking and plugin related functionality
+- application and deployment configuration (docker etc.)
+
+These areas either accept untrusted input or provide access to security sensitive areas or resources.
+
+## 6. Identified threats
