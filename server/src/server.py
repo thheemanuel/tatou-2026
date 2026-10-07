@@ -2,6 +2,13 @@ import os
 import io
 import hashlib
 import datetime as dt
+# json creates machine readable log entries
+import json
+# logging gives us a dedicated tatou.security logger
+import logging
+# uuid gives every http request a correlation id
+import uuid
+
 
 # Adding in parameters so that other groups can not keep sweeping our system
 # After doing this on other groups I realized we could just sweep everything without it taking anytime
@@ -112,6 +119,61 @@ def create_app():
             eng = create_engine(db_url(), pool_pre_ping=True, future=True)
             app.config["_ENGINE"] = eng
         return eng
+    
+    # --- Security info/telemetry (Specialization D) ---
+    
+    # separate logger used for security-relevant events
+
+    security_logger = logging.getLogger("tatou.security")
+    
+    @app.before_request
+    def assign_request_id():
+        
+        # give every http request a unique id
+        
+        # security events can be traced to http requests if necessary
+        
+        # g belongs to flask and is imported at the top
+        
+        # works as a temporary storage for the current request
+        
+        # uuid.uuid4 generates a random uuid
+        
+        # hex turns it into hexadecimal string 
+        
+        g.request_id = uuid.uuid4().hex
+        
+    # event is required, string
+    # **fields allows this method to accept a number of additional named values, it becomes a dictionary inside
+    def security_event(event: str, **fields):
+        
+        # security event template
+        
+        # create a dictionary containing information about the security event.
+        
+        # .isoformat() converts the datetime object into a standardized string thats convenient for logs
+        
+        # request id is recieved by the previous method, if not, None
+        
+        
+        record = {
+            "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "event": event,
+            "request_id": getattr(g, "request_id", None),
+            "source_ip": request.remote_addr,
+        }
+        
+        # build the log
+        
+        for key, value in fields.items():
+            if value is not None:
+                record[key] = value
+        
+        # write the log
+        security_logger.info(
+            json.dumps(record, separators=(",", ":"), default=str)
+        )
+        
 
     # --- Helpers ---
     def _serializer():
@@ -125,13 +187,31 @@ def create_app():
         def wrapper(*args, **kwargs):
             auth = request.headers.get("Authorization", "")
             if not auth.startswith("Bearer "):
+                security_event(
+                    "authentication.failure",
+                    reason="missing_or_invalid_authorization_header",
+                    outcome="failure",
+                )
+                
                 return _auth_error("Missing or invalid Authorization header")
             token = auth.split(" ", 1)[1].strip()
             try:
                 data = _serializer().loads(token, max_age=app.config["TOKEN_TTL_SECONDS"])
             except SignatureExpired:
+                security_event(
+                    "authentication.failure",
+                    reason="expired_token",
+                    outcome="failure",
+                )
+                
                 return _auth_error("Token expired")
             except BadData:
+                security_event(
+                    "authentication.failure",
+                    reason="invalid_token",
+                    outcome="failure",
+                )
+                
                 return _auth_error("Invalid token")
             # Changed Badsignature into BadData which is the parent of both badsignature and badpayload
             # this will catch a token that is valid but contains a bad payload
@@ -176,7 +256,16 @@ def create_app():
         # If they already have the amount of requests allowed within the time limit,
         # send then an error message and stop here. This is just done so that unwanted users need to wait longer
         if len(timestamps) >= request_limit_count:
-            return jsonify({"error": "too many request done, please slow down from now on!"}), 429
+            security_event(
+                "rate_limit.exceeded",
+                outcome="denied",
+                request_count=len(timestamps),
+                window_seconds=time_limit_window,
+            )
+            
+            return jsonify({
+                "error": "too many requests done, please slow down from now on!"
+            }), 429
         
         # If we are within the time limit, this is most likely a legit user then they can proceed
         timestamps.append(now)
@@ -261,9 +350,22 @@ def create_app():
             return jsonify({"error": f"database error: {str(e)}"}), 503
 
         if not row or not check_password_hash(row.hpassword, password):
+            security_event(
+                "authentication.failure",
+                reason="invalid_credentials",
+                outcome="failure",
+            )
+            
             return jsonify({"error": "invalid credentials"}), 401
 
         token = _serializer().dumps({"uid": int(row.id), "login": row.login, "email": row.email})
+        
+        security_event(
+            "authentication.success",
+            user_id=int(row.id),
+            outcome="success",
+        )
+        
         return jsonify({"token": token, "token_type": "bearer", "expires_in": app.config["TOKEN_TTL_SECONDS"]}), 200
 
     # POST /api/upload-document  (multipart/form-data)
