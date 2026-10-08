@@ -9,6 +9,9 @@ import logging
 # uuid gives every http request a correlation id
 import uuid
 
+# since the logger is not working, this will be needed to print out debugging info
+import sys
+
 
 # Adding in parameters so that other groups can not keep sweeping our system
 # After doing this on other groups I realized we could just sweep everything without it taking anytime
@@ -125,6 +128,16 @@ def create_app():
     # separate logger used for security-relevant events
 
     security_logger = logging.getLogger("tatou.security")
+    
+    #adding a lot of debugging code, the logger did not output any logs during manual testing
+    security_logger.setLevel(logging.INFO)
+    
+    if not security_logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        security_logger.addHandler(handler)
+        
+    security_logger.propagate = False
     
     @app.before_request
     def assign_request_id():
