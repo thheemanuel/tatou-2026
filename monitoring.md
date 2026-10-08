@@ -10,7 +10,7 @@ Sensitive information such as passwords, bearer tokens, secret document links, w
 
 ## 2. Application security events
 
-### authentication.success
+### authentication.success IMPLEMENTED
 
 Generated when a user successfully authenticates.
 
@@ -21,7 +21,7 @@ Fields:
 - user_id
 - source_ip
 
-### authentication.failure
+### authentication.failure IMPLEMENTED
 
 Generated when authentication fails.
 
@@ -33,10 +33,9 @@ Fields:
 - account identifier where appropriate
 - failure category
 
-### authorization.denied
+### authorization.denied IMPLEMENTED (for /api/get-document)
 
-Generated when an authenticated user attempts an operation on a resource
-they do not own.
+Generated when an authenticated user attempts an operation on a resource they do not own.
 
 Fields:
 
@@ -48,7 +47,7 @@ Fields:
 - resource_type
 - resource_id
 
-### document.upload
+### document.upload PLANNED
 
 Generated after a document upload attempt.
 
@@ -62,7 +61,7 @@ Fields:
 - result
 - safe file metadata
 
-### plugin.load
+### plugin.load PLANNED
 
 Generated when plugin loading is attempted.
 
@@ -75,7 +74,7 @@ Fields:
 - result
 - failure category
 
-### rmap.authentication
+### rmap.authentication PLANNED
 
 Generated during RMAP authentication.
 
@@ -88,7 +87,7 @@ Fields:
 - result
 - failure category
 
-### secret_link.access
+### secret_link.access PLANNED
 
 Generated when public version retrieval is attempted.
 
