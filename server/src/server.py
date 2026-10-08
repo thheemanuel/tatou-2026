@@ -615,6 +615,14 @@ def create_app():
 
         # Don’t leak whether a doc exists for another user
         if not row:
+            try:
+                log_document_access_denied(document_id, "read")
+            
+            except Exception:
+                app.logger.warning(
+                    "Could not classify denied document acces"
+                )
+            
             return jsonify({"error": "document not found"}), 404
 
         file_path = Path(row.path)
