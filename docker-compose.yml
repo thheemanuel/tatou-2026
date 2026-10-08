@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   server:
+    image: tatou-2026-server:latest
     build:
       context: server
       dockerfile: Dockerfile
@@ -32,6 +33,21 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+
+  tests:
+    profiles:
+      - testing
+    build:
+      context: server
+      dockerfile: Dockerfile.test
+    volumes:
+      - ./server/src:/app/src:ro
+      - ./server/test:/app/test:ro
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["sleep", "infinity"]
 
   db:
     image: mariadb:11.4

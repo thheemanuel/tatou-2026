@@ -1,0 +1,8 @@
+# reuse the existing Tatou application image
+FROM tatou-2026-server:latest
+
+# install development dependencies, including pytest
+RUN pip install --no-cache-dir -e ".[dev]"
+
+# keep the test container running so we can execute pytest repeatedly
+CMD ["sleep", "infinity"]
