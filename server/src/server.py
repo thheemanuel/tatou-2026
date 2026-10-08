@@ -187,6 +187,42 @@ def create_app():
             json.dumps(record, separators=(",", ":"), default=str)
         )
         
+    # new helper method logging authorization events
+    
+    # more precisely, log a security event when a user attempts to access a document that belongs to someone else.
+    
+    # document id refers to the document that someone tried to access
+    # action is what they attempted to do, for example "read" or "delete"
+    def log_document_access_denied(document_id, action):
+        
+        # connect to the database
+        # query the document owner
+        # find the document with the specified id and retrieve the id of its owner
+        with get_engine().connect() as conn:
+            owner_id = conn.execute(
+                text("""
+                     SELECT ownerid
+                     FROM Documents
+                     WHERE id = :document_id
+                     LIMIT 1
+                
+                """),
+                {"document_id": document_id},
+            ).scalar_one_or_none()
+            #scalar_one or none retrieves a single value from the query result
+            
+            # if a owner exists, log it, if no owner exists, skip the logging operation
+        if owner_id is not None and int(owner_id) != int(g.user["id"]):
+            security_event(
+                "authorization.denied",
+                user_id=int(g.user["id"]),
+                resource_type="document",
+                resource_id=int(document_id),
+                action=action,
+                reason="ownership_mismatch",
+                outcome="failure",
+            )
+        
 
     # --- Helpers ---
     def _serializer():
