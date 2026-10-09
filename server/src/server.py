@@ -448,6 +448,14 @@ def create_app():
         # This change is inspired by the documentation: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
         fname = secure_filename(file.filename)
         if not fname:
+            
+            security_event(
+                "document.upload",
+                user_id=int(g.user["id"]),
+                result="failure",
+                reason="invalid_filename",
+            )
+            
             return jsonify({"error": "not a valid filename"}), 400
         
         # Here we also verify that the uploaded content actually is a pdf. Before this change it only checked the filename/extension and allowed it
@@ -456,6 +464,14 @@ def create_app():
         # Here we also make sure that file.save below still writes the whole file
         file.stream.seek(0)
         if not is_pdf_bytes(header):
+            
+            security_event(
+                "document.upload",
+                user_id=int(g.user["id"]),
+                result="failure",
+                reason="invalid_pdf",
+            )
+            
             return jsonify({"error": "uploaded file is not a valid PDF, please try again"}), 400
 
         user_dir = app.config["STORAGE_DIR"] / "files" / g.user["login"]
