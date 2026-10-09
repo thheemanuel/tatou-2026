@@ -433,6 +433,14 @@ def create_app():
             return jsonify({"error": "file is required (multipart/form-data)"}), 400
         file = request.files["file"]
         if not file or file.filename == "":
+            
+            security_event(
+                "document.upload",
+                user_id=int(g.user["id"]),
+                result="failure",
+                reason="empty_filename",
+            )
+            
             return jsonify({"error": "empty filename"}), 400
 
         # Fixed so that a document that is uploaded must be a pdf file, before it still allowed documents to pass if they had for example
