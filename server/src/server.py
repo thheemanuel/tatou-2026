@@ -522,6 +522,16 @@ def create_app():
             
             return jsonify({"error": f"database error: {str(e)}"}), 503
         
+        # document upload is the event name as previously established
+        
+        # second line, it identifies which user uploaded the document (gets the id from the dict or hashmap)
+        
+        # third line, identifies which document was uploaded
+        
+        # fourth line, outputs the result of the upload
+        
+        # fifth line, records the size of the uploaded file
+        
         security_event(
             "document.upload",
             user_id=int(g.user["id"]),
