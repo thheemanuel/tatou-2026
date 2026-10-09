@@ -511,7 +511,24 @@ def create_app():
                     {"id": did},
                 ).one()
         except Exception as e:
+            
+            security_event(
+                "document.upload",
+                user_id=int(g.user["id"]),
+                result="failure",
+                reason="database_error",
+                file_size=int(size),
+            )
+            
             return jsonify({"error": f"database error: {str(e)}"}), 503
+        
+        security_event(
+            "document.upload",
+            user_id=int(g.user["id"]),
+            document_id=int(row.id),
+            result="success",
+            file_size=int(row.size),
+        )
 
         return jsonify({
             "id": int(row.id),
