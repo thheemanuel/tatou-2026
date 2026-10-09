@@ -47,7 +47,7 @@ Fields:
 - resource_type
 - resource_id
 
-### document.upload PLANNED
+### document.upload IMPLEMENTED
 
 Generated after a document upload attempt.
 
