@@ -422,6 +422,14 @@ def create_app():
     @require_auth
     def upload_document():
         if "file" not in request.files:
+            
+            security_event(
+                "document.upload",
+                user_id=int(g.user["id"]),
+                result="failure",
+                reason="missing_file",
+            )
+            
             return jsonify({"error": "file is required (multipart/form-data)"}), 400
         file = request.files["file"]
         if not file or file.filename == "":
