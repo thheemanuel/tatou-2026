@@ -61,7 +61,7 @@ Fields:
 - result
 - safe file metadata
 
-### plugin.load PLANNED
+### plugin.load IMPLEMENTED
 
 Generated when plugin loading is attempted.
 
