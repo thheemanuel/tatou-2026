@@ -1024,11 +1024,23 @@ def create_app():
         STORAGE_DIR/files/plugins/<filename>.{pkl|dill} and register it in wm_mod.METHODS.
         Body: { "filename": "MyMethod.pkl", "overwrite": false }
         """
+        
+        def log_plugin_load(result, reason=None):
+            security_event(
+                "plugin.load",
+                user_id=int(g.user["id"]),
+                result=result,
+                reason=reason,
+            )
+        
         payload = request.get_json(silent=True) or {}
         filename = (payload.get("filename") or "").strip()
         overwrite = bool(payload.get("overwrite", False))
 
         if not filename:
+            
+            log_plugin_load("failure", "missing_filename")
+            
             return jsonify({"error": "filename is required"}), 400
 
         # Locate the plugin in /storage/files/plugins (relative to STORAGE_DIR)
@@ -1038,17 +1050,21 @@ def create_app():
             plugins_dir.mkdir(parents=True, exist_ok=True)
             plugin_path = (plugins_dir / filename).resolve()
         except Exception:
+            log_plugin_load("failure", "path_error")
             return jsonify({"error": "plugin path error"}), 500
 
         # Reject filenames that escape the plugins directory (e.g. ../../)
         if not plugin_path.is_relative_to(plugins_dir):
+            log_plugin_load("failure", "invalid_path")
             return jsonify({"error": "invalid plugin path"}), 400
 
         # Only accept the expected file types
         if plugin_path.suffix.lower() not in (".pkl", ".dill"):
+            log_plugin_load("failure", "invalid_extension")
             return jsonify({"error": "invalid plugin extension"}), 400
 
         if not plugin_path.exists():
+            log_plugin_load("failure", "file_not_found")
             return jsonify({"error": "plugin file not found"}), 404
 
         # Deserialize the plugin using the restricted unpickler.
@@ -1057,8 +1073,10 @@ def create_app():
             with plugin_path.open("rb") as f:
                 obj = SafeUnpickler(f).load()
         except pickle.UnpicklingError:
+            log_plugin_load("failure", "forbidden_class")
             return jsonify({"error": "plugin rejected: contains forbidden classes"}), 400
         except Exception:
+            load_plugin("failure", "deserialization_error")
             return jsonify({"error": "failed to deserialize plugin"}), 400
 
         # Accept: class object, or instance (we'll promote instance to its class)
@@ -1070,6 +1088,7 @@ def create_app():
         # Determine method name for registry
         method_name = getattr(cls, "name", getattr(cls, "__name__", None))
         if not method_name or not isinstance(method_name, str):
+            log_plugin_load("failure", "invalid_class_name")
             return jsonify({"error": "plugin class must define a readable name (class.__name__ or .name)"}), 400
 
         # Validate interface: either subclass of WatermarkingMethod or duck-typing
@@ -1079,10 +1098,13 @@ def create_app():
         else:
             is_ok = has_api
         if not is_ok:
+            log_plugin_load("failure", "invalid_interface")
             return jsonify({"error": "plugin does not implement WatermarkingMethod API (add_watermark/read_secret)"}), 400
             
         # Register the class (not an instance) so you can instantiate as needed later
         WMUtils.METHODS[method_name] = cls()
+        
+        log_plugin_load("success")
         
         return jsonify({
             "loaded": True,
