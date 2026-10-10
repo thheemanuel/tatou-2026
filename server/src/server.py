@@ -69,6 +69,10 @@ def create_app():
     # Adding in a max upload limit to 20MB so that an attacker can not upload an insanely huge file
     app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 20 * 1024 * 1024))
 
+    # Creating a way to turn on and off the rate limiting, this is done so that we can turn it off for testing purposes
+    app.config["RATE_LIMIT_ENABLED"] = True
+
+
     app.config["DB_USER"] = os.environ.get("DB_USER", "tatou")
     app.config["DB_PASSWORD"] = os.environ.get("DB_PASSWORD", "tatou")
     app.config["DB_HOST"] = os.environ.get("DB_HOST", "db")
@@ -286,7 +290,11 @@ def create_app():
     
     @app.before_request
     def timeRate_limit():
-        # First make it so that we dont limit the amount of times 
+        # We want to skip this limit when we are actually running our own testing.
+        if not app.config.get("RATE_LIMIT_ENABLED", True):
+            return
+
+        # Also make it so that we dont limit the amount of times 
         # healthz is called. Should be unaffected here
         if request.path == "/healthz":
             return
