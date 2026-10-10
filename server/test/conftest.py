@@ -34,6 +34,9 @@ from server import app  # noqa: E402  (must come after the RMAP stub)
 @pytest.fixture
 def client():
     app.config["TESTING"] = True
+    # Adding in a way to turn off the rate limiting for testing purposes
+    # The reason for this is because our own tests may send lots of requests, for example the Fuzzing
+    app.config["RATE_LIMIT_ENABLED"] = False
     return app.test_client()
 
 
