@@ -110,7 +110,7 @@ def test_rejected_serialized_object_is_logged(client, tmp_path, caplog):
     # serialize a harmless built in object
     # safeunpickler should reject its class because it is not allowed
     plugin_path = plugins_dir / "rejected.pkl"
-    plugin_path.write_bytes(pickle.dumps(set([1, 2, 3])))
+    plugin_path.write_bytes(pickle.dumps(ValueError("test")))
 
     try:
         response = client.post(
