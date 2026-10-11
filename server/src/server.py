@@ -1222,6 +1222,14 @@ def create_app():
         #2. it contains a field called "payload"
         #3. the payload is a string
         if not isinstance(data, dict) or not isinstance(data.get("payload"), str):
+            
+            security_event(
+                "rmap.authentication",
+                stage="initiate",
+                result="failure",
+                reason="invalid_message_format",
+            )
+            
             return jsonify({
                 "error": "invalid RMAP message"
             }), 400
@@ -1239,6 +1247,12 @@ def create_app():
             #response: the encrypted RMAP response 1 that must be sent back to the client.
             identity, response = rmap_server.receiveMsg1(data)
             
+            security_event(
+                "rmap.authentication",
+                stage="initiate",
+                result="success",
+            )
+            
             # record the identity which started the handshake, do not log secret information.
             app.logger.info(
                 "RMAP handshake initiated by %s",
@@ -1253,6 +1267,13 @@ def create_app():
         
         #the rmap library rejected the message
         except RMAPError as e:
+            security_event(
+                "rmap.authentication",
+                stage="initiate",
+                result="failure",
+                reason="protocol_rejected",
+            )
+            
             app.logger.warning(
                 "RMAP authentication failed: %s",
                 e
@@ -1264,6 +1285,14 @@ def create_app():
         
         #catches other unexpected probelsm with the incoming message so that flask does not return an uncontrolled traceback to the user.
         except Exception:
+            
+            security_event(
+                "rmap.authentication",
+                stage="initiate",
+                result="failure",
+                reason="unexpected_error",
+            )
+            
             app.logger.exception(
                 "Invalid RMAP initiate message"
             )
