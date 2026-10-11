@@ -35,6 +35,7 @@
 from __future__ import annotations
 from typing import Final
 
+import base64
 import hmac
 import hashlib
 import fitz # PyMuPDF
@@ -97,7 +98,10 @@ class AuthorFieldWaterMarking(WatermarkingMethod):
             raise ValueError("Key must be a non empty string, please input a key.")
 
         # The value that gets stored.
-        stored = secret + "|" + self._sign(secret, key)
+        # stored = secret + "|" + self._sign(secret, key). Replacing this with the new implementation from base64
+        # Reason for this change was that when fuzzing we found that PyMuPDF changes some characters when saving the metadata.
+        encoded = base64.b64encode(secret.encode()).decode()
+        stored = encoded + "|" + self._sign(encoded, key)
 
         doc = fitz.open(stream=data, filetype="pdf")
         try:
@@ -140,14 +144,17 @@ class AuthorFieldWaterMarking(WatermarkingMethod):
 
         # This splits a group name for example: "group-07|23e2f4 or something like that" secret becomes -> "group-07" and signature becomes -> "23s2f4"
         # Signature only contains numbers from 0-9 and letters a-f 
-        secret, signature = stored.rsplit("|", 1)
-        
+        encoded, signature = stored.rsplit("|", 1)
+
+        # Check the signature before decocing so we only decode text that was really written with this key. Changed in #4 in the documentation below.
+        # we use .encode which compares bytes instead of text: compare _digest previously crached woth TypeError when an attacker put non-ASCII characters in the author field.
         # Now we calculate the signature again with the key we were given and compare it to the stored one
         # If it is wrong or edided then we raise and error since it did not match
-        if not hmac.compare_digest(signature, self._sign(secret, key)):
+        if not hmac.compare_digest(signature.encode(), self._sign(encoded, key).encode()):
             raise InvalidKeyError("This is the wrong key or the watermark has been tampered with")
 
-        return secret
+        # Decode the base64 encoded secret. Changing to match base64
+        return base64.b64decode(encoded).decode()
 
 # 1. Have written a test with the help of AI in order to test the method i created, got feedback on first few test for: 14 passed, 3 xfailed in 0.15s,
 # This allowed me to implement some more fixes like empty pdf aswell as matching key and signature.
@@ -162,5 +169,17 @@ class AuthorFieldWaterMarking(WatermarkingMethod):
 # The last xfail is as i understood when researching and asking AI, is if someone does a complete metadata wipe, I dont really know how to fix that yet. Will have to be something I fix later on.
 # What to do until next deadline is to make it more robust by perhaps creating a second copy inside the middle of the page as invisible text or something like that.
 # Also implement position to choose where it will be stored.
+
+# 4. When doing my specilization for fuzzing, I wrote a fuzz test with Hypothesis (test_fuzz_watermarking_tom.py)
+# Instead of me choosing example secrets, Hypothesis would gerenate 500 random secrets and keys to check the rules in the watermarking method.
+# The test was setup so it would add a secret and then read the same secret. In this we found a major bug: secret "\x1f" could not be read back and was wrongly reportet as tampered with.
+# The cause for this was: PyMuPDF replaces 62 characters (control characters, no break space, soft hyphen and some others) when saving the metadata. So the stored secret got changed,
+# and no longer matched its HMAC. Impact: this means that a leaked PDF can not be traced and not be accessed with the correct key.
+# The fix I implemented to deal with this was to use: base64 encoding the secret before storing/signing (only safecharacters will be stored). I used this instead of blocking since I believe
+# a blocklist can miss some aswell. The thing is that Base64 is not encryption it only hides the secret at first glance. Side effect of this will be that
+# old watermarked pdfs can no longer be read since the stored format has changed.
+# REgression: failing inputs added with @example in the fuzz test.
+# My reults after the fix: 1 passed in 0.86s (500 random secrets/keys plus the two @example cases.)
+# The full test still passes so the base64 change did not break the earlier tests.
 
 __all__ = ["AuthorFieldWaterMarking"]
