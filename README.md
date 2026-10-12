@@ -32,6 +32,19 @@ python -m pip install -e ".[dev]"
 python -m pytest
 ```
 
+### Run mutation testing
+
+Mutation testing (Cosmic Ray) runs in Docker. Each run mutates one source file on a private copy of the code and writes its results to `server/mutation/results/` (not committed). Configured targets: `watermarking_method_gustav` and `server`.
+
+```bash
+cd tatou/server
+docker build -t tatou-mutation mutation/
+mutation/run.sh watermarking_method_gustav
+
+# surviving mutants with their diffs
+cat mutation/results/watermarking_method_gustav.report.txt
+```
+
 ### Deploy
 
 From the root of the directory:

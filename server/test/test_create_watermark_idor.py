@@ -35,6 +35,9 @@
 
 from sqlalchemy import text
 
+# fitz (PyMuPDF) is used to build a real one-page pdf for the test
+import fitz
+
 
 # import a helper method/function from the projects existing conftest.py
 # it creates the authorization header needed to make requests as a authenticated user
@@ -60,15 +63,13 @@ def send_alice_document(db_engine, tmp_path):
     
     pdf_path = tmp_path / "alice.pdf"
     
-    # create the tiny pdf
-    
-    # contents are not important for the test
-    
-    pdf_path.write_bytes(
-        b"%PDF-1.4\n"
-        b"% Secrets Alice\n"
-        b"%EOF\n"
-        )
+    # create a one-page pdf: toy-eof (which accepted any bytes) was removed,
+    # and the invisible-text method needs at least one page to write on
+
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 72), "Secrets Alice")
+    doc.save(pdf_path)
+    doc.close()
     
     
     # connect to the database in order to write a query inserting the created pdf and alice as the owner (uid = 1)
@@ -137,9 +138,9 @@ def test_create_watermark_enforces_document_ownership(client, db_engine, tmp_pat
         # this payload will be used by both alice and bob since both of them are going to use the exact same operation on the exact same document
         
     payload = {
-            "method": "toy-eof",
+            "method": "invisible-text",
             "intended_for": "example@example.com",
-            "position": "eof",
+            "position": None,
             "secret": "alice-secret",
             "key": "test-key",
             }

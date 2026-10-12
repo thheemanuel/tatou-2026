@@ -1,0 +1,9 @@
+[cosmic-ray]
+module-path = "src/watermarking_method_gustav.py"
+timeout = 60.0
+excluded-modules = []
+# -x stops at the first failing test, one failing test is enough to kill a mutant
+test-command = "env PYTHONPATH=src python -m pytest -x -q -p no:cacheprovider test/"
+
+[cosmic-ray.distributor]
+name = "local"
