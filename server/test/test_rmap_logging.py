@@ -177,6 +177,7 @@ def test_get_link_unexpected_error(client, caplog):
         RMAPServer,
         "receiveMsg2",
         side_effect=RuntimeError("test error"),
+        create=True
     ):
         response = client.post(
             "/api/rmap-get-link",
