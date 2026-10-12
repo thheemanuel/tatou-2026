@@ -42,6 +42,8 @@ from __future__ import annotations
 
 from typing import Final
 
+import base64
+import binascii
 import hashlib
 import hmac
 
@@ -63,7 +65,16 @@ class InvisibleTextWatermark(WatermarkingMethod):
     name: Final[str] = "invisible-text"
 
     # Tag prepended to the hidden text so we can find our payload later.
-    _MARKER: Final[str] = "TATOUWM:"
+    # New format (v2) stores the secret base64url encoded. The old format (v1)
+    # stored it as plain text, I still read it so old watermarked PDFs work.
+    _MARKER: Final[str] = "TATOUWM2:"
+    _LEGACY_MARKER: Final[str] = "TATOUWM:"
+
+    # insert_text just cuts off text that goes past the page edge, so long
+    # secrets got cut off. Now the font gets smaller so it fits, and if it
+    # would have to be smaller than the minimum we raise an error instead.
+    _MAX_FONTSIZE: Final[float] = 1.0
+    _MIN_FONTSIZE: Final[float] = 0.005
 
     # Separates secret from signature in the stored payload. sha256 hex
     # digests never contain "|", and rsplit(..., 1) means even a "|" in
@@ -116,14 +127,24 @@ class InvisibleTextWatermark(WatermarkingMethod):
             raise ValueError("Key must be a non-empty string")
 
         signature = self._sign(secret, key)
-        payload = secret + self._SEP + signature
+        # Encode the secret with base64url so the hidden text is only ASCII.
+        # The default font can't write things like Chinese or emoji, they came
+        # back as "?" and then the HMAC check failed. base64url also never
+        # contains "|" or spaces, so the payload is always one clean piece.
+        encoded = base64.urlsafe_b64encode(secret.encode("utf-8")).decode("ascii")
+        payload = encoded + self._SEP + signature
 
         doc = fitz.open(stream=load_pdf_bytes(pdf), filetype="pdf")
         page = doc.load_page(0)
+        line = self._MARKER + payload
+        fontsize = min(self._MAX_FONTSIZE, (page.rect.width - 1) / fitz.get_text_length(line, fontsize=1))
+        if fontsize < self._MIN_FONTSIZE:
+            doc.close()
+            raise ValueError("Secret is too long to embed on the first page")
         # The actual watermark: a text-show operation with the PDF `Tr`
         # (text rendering mode) operator set to 3 = invisible. The glyphs
         # are recorded in the content stream but never painted.
-        page.insert_text((0, 10), self._MARKER + payload, fontsize=1, render_mode=3)
+        page.insert_text((0, 10), line, fontsize=fontsize, render_mode=3)
         # no_new_id=True stops PyMuPDF from randomizing the trailer /ID
         # on save, which would otherwise break determinism.
         out = doc.tobytes(no_new_id=True)
@@ -140,10 +161,36 @@ class InvisibleTextWatermark(WatermarkingMethod):
         text = doc.load_page(0).get_text()
         doc.close()
 
-        idx = text.find(self._MARKER)
+        if self._MARKER not in text:
+            return self._read_legacy(text, key)
+
+        # There can be more than one marker on the page (watermarked twice, or
+        # someone added a fake one). Go through all of them from the newest and
+        # return the first one where the HMAC is correct.
+        found_any = False
+        for chunk in reversed(text.split(self._MARKER)[1:]):
+            token = chunk.split(None, 1)[0] if chunk.strip() else ""
+            if self._SEP not in token:
+                continue
+            encoded, signature = token.rsplit(self._SEP, 1)
+            try:
+                secret = base64.urlsafe_b64decode(encoded.encode("ascii")).decode("utf-8")
+            except (binascii.Error, UnicodeError, ValueError):
+                continue
+            found_any = True
+            if hmac.compare_digest(signature, self._sign(secret, key)):
+                return secret
+
+        if found_any:
+            raise InvalidKeyError("Provided key failed to authenticate the watermark")
+        raise SecretNotFoundError("Watermark payload is malformed")
+
+    def _read_legacy(self, text: str, key: str) -> str:
+        """Reads the old v1 format (plain secret after "TATOUWM:")."""
+        idx = text.find(self._LEGACY_MARKER)
         if idx == -1:
             raise SecretNotFoundError("No watermark found")
-        payload = text[idx + len(self._MARKER):].strip()
+        payload = text[idx + len(self._LEGACY_MARKER):].strip()
 
         if self._SEP not in payload:
             raise SecretNotFoundError("Watermark payload is malformed")
