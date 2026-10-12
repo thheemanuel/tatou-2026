@@ -48,14 +48,13 @@ from watermarking_method_theo import watermarking_method_theo
 
 from watermarking_method_gustav import InvisibleTextWatermark
 
-from add_after_eof import AddAfterEOF
 # --------------------
 # Method registry
 # --------------------
 
+# Removed the toy-eof method, its watermark can be removed just by cutting
+# the file at the last %%EOF.
 METHODS: Dict[str, WatermarkingMethod] = {
-    AddAfterEOF.name: AddAfterEOF(),
-    
     # Adding in my watermarking method /Tom
     AuthorFieldWaterMarking.name: AuthorFieldWaterMarking(),
     
