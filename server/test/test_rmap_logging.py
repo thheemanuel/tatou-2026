@@ -4,6 +4,8 @@ import logging
 
 from unittest.mock import patch
 
+import server
+
 from server import RMAPServer
 
 
@@ -75,6 +77,7 @@ def test_initiate_success(client, caplog):
         RMAPServer,
         "receiveMsg1",
         return_value=("TestGroup", {"payload": "response"}),
+        create=True
     ):
         response = client.post(
             "/api/rmap-initiate",
@@ -98,6 +101,7 @@ def test_initiate_protocol_rejected(client, caplog):
         RMAPServer,
         "receiveMsg1",
         side_effect=ValueError("bad protocol message"),
+        create=True
     ):
         response = client.post(
             "/api/rmap-initiate",
@@ -121,6 +125,7 @@ def test_get_link_protocol_rejected(client, caplog):
         RMAPServer,
         "receiveMsg2",
         side_effect=ValueError("bad protocol message"),
+        create=True
     ):
         response = client.post(
             "/api/rmap-get-link",
@@ -144,6 +149,7 @@ def test_get_link_duplicate_link(client, caplog):
         RMAPServer,
         "receiveMsg2",
         return_value=("TestGroup", "test-link", {"payload": "response"}),
+        create=True
     ):
        
         response = client.post(
@@ -156,9 +162,12 @@ def test_get_link_duplicate_link(client, caplog):
 
     events = rmap_events(caplog)
 
-    assert len(events) >= 1
+    assert len(events) == 2
     assert events[0]["stage"] == "get_link"
     assert events[0]["result"] == "success"
+    assert events[1]["stage"] == "get_link"
+    assert events[1]["result"] == "processing_failure"
+    assert events[1]["reason"] == "duplicate_link"
 
 
 def test_get_link_unexpected_error(client, caplog):
