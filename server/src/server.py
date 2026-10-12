@@ -737,10 +737,24 @@ def create_app():
                     {"link": link},
                 ).first()
         except Exception as e:
+            
+            security_event(
+                "secret_link.access",
+                result="failure",
+                reason="database_error",
+            )
+            
             return jsonify({"error": f"database error: {str(e)}"}), 503
 
         # Don’t leak whether a doc exists for another user
         if not row:
+            
+            security_event(
+                "secret_link.access",
+                result="failure",
+                reason="invalid_link",
+            )
+            
             return jsonify({"error": "document not found"}), 404
 
         file_path = Path(row.path)
@@ -750,9 +764,23 @@ def create_app():
             file_path.resolve().relative_to(app.config["STORAGE_DIR"].resolve())
         except Exception:
             # Path looks suspicious or outside storage
+            
+            security_event(
+                "secret_link.access",
+                result="failure",
+                reason="invalid_file_path",
+            )
+            
             return jsonify({"error": "document path invalid"}), 500
 
         if not file_path.exists():
+            
+            security_event(
+                "secret_link.access",
+                result="failure",
+                reason="file_missing",
+            )
+            
             return jsonify({"error": "file missing on disk"}), 410
 
         # Serve inline with caching hints + ETag based on stored sha256
@@ -767,6 +795,12 @@ def create_app():
         )
 
         resp.headers["Cache-Control"] = "private, max-age=0"
+        
+        security_event(
+            "secret_link.access",
+            result="success"
+        )
+        
         return resp
     
     # Helper: resolve path safely under STORAGE_DIR (handles absolute/relative)
@@ -1076,7 +1110,7 @@ def create_app():
             log_plugin_load("failure", "forbidden_class")
             return jsonify({"error": "plugin rejected: contains forbidden classes"}), 400
         except Exception:
-            load_plugin("failure", "deserialization_error")
+            log_plugin_load("failure", "deserialization_error")
             return jsonify({"error": "failed to deserialize plugin"}), 400
 
         # Accept: class object, or instance (we'll promote instance to its class)
