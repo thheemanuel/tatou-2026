@@ -150,6 +150,8 @@ class AuthorFieldWaterMarking(WatermarkingMethod):
         # we use .encode which compares bytes instead of text: compare _digest previously crached woth TypeError when an attacker put non-ASCII characters in the author field.
         # Now we calculate the signature again with the key we were given and compare it to the stored one
         # If it is wrong or edided then we raise and error since it did not match
+        # Also tried the ASCII one with if not hmac.compare_digest(signature, self._sign(encoded, key)):
+        # THis made the fuzzer fail with TypeError (for more information on that see test_fuzz_watermarking_tom.py)
         if not hmac.compare_digest(signature.encode(), self._sign(encoded, key).encode()):
             raise InvalidKeyError("This is the wrong key or the watermark has been tampered with")
 
@@ -181,5 +183,14 @@ class AuthorFieldWaterMarking(WatermarkingMethod):
 # REgression: failing inputs added with @example in the fuzz test.
 # My reults after the fix: 1 passed in 0.86s (500 random secrets/keys plus the two @example cases.)
 # The full test still passes so the base64 change did not break the earlier tests.
+
+# 5. Second fuzz test was the test_fuzz_read_any_author_field. The author field is a property that the attacker can control,
+# because read-watermark can be called on any PDF a user uploads. So I used Hypothesis to generate 500 random author strings and the rule was
+# that read-watermark only raises SecretNotFoundError or InvalidKeyError. I tried it without having encode() in hmac.compare.digest. This failed with TypeError
+# for non-ASCII text after the "|" en example of a fail was "x|é", so the server could crash a hostile PDF. The rootcause of this is the same as in log #4, PyMuPDF rewrites some characters,
+# the control characters become "·", and the signature can then not be read back since it is not ASCII. So the fiz was to compare bytes. This was checked by removing encode() and this made the test fail.
+# When restoring encode() the 2 tests succeeded. I have however not checked the subject field fallback or PDFs where the metadata has been stripped.
+
+
 
 __all__ = ["AuthorFieldWaterMarking"]
