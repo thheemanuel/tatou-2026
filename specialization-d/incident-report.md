@@ -78,6 +78,8 @@ The available screenshots do not prove malicious intent, successful account comp
 
 ### Evidence Limitations
 
+The authentication-failure events are also documented in `specialization-d/evidence/security-logging-evidence-rate-limiting.png`, which shows recorded authentication failures. This evidence confirms that the events were logged, but does not establish malicious intent or a successful account compromise.
+
 The currently collected Docker log file contains 600 rate-limit violations but no authentication-failure events.
 
 Therefore, this incident is supported by previously captured screenshots rather than by the current exported log file.
