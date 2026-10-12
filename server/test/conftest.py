@@ -54,14 +54,6 @@ def db_engine(tmp_path):
             )
         """))
         
-        conn.execute(text("""
-            CREATE TABLE Versions (
-            id INTEGER PRIMARY KEY,
-            link TEXT,
-            path TEXT
-            )
-        """))
-        
     app.config["_ENGINE"] = engine
     yield engine
     app.config.pop("_ENGINE", None)

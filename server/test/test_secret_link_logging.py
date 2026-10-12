@@ -3,9 +3,10 @@ import json
 import logging
 
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
-from sqlalchemy import text
-
+from server import app
 
 
 def secret_link_events(caplog):
@@ -23,7 +24,6 @@ def secret_link_events(caplog):
     return events
 
 
-
 def assert_secret_link_event(events, result, reason=None):
     assert len(events) == 1
 
@@ -36,37 +36,62 @@ def assert_secret_link_event(events, result, reason=None):
 
     if reason is not None:
         assert event["reason"] == reason
+    else:
+        assert "reason" not in event
 
-    
     assert "link" not in event
     assert "secret" not in event
 
 
 
-def insert_version(db_engine, link, path):
-    with db_engine.begin() as conn:
-        conn.execute(
-            text("""
-                INSERT INTO Versions (link, path)
-                VALUES (:link, :path)
-            """),
-            {
-                "link": link,
-                "path": str(path),
-            },
-        )
+def fake_database_row(row):
+    engine = MagicMock()
+    connection = engine.connect.return_value.__enter__.return_value
+    connection.execute.return_value.first.return_value = row
+    return engine
 
 
-def test_secret_link_success(client, db_engine, tmp_path, caplog):
+def request_with_engine(client, link, engine):
+    original_engine = app.config.get("_ENGINE")
+
+    try:
+        app.config["_ENGINE"] = engine
+
+        return client.get(f"/api/get-version/{link}")
+
+    finally:
+        if original_engine is None:
+            app.config.pop("_ENGINE", None)
+        else:
+            app.config["_ENGINE"] = original_engine
+
+
+def test_secret_link_success(client, tmp_path, caplog):
     caplog.set_level(logging.INFO, logger="tatou.security")
 
-    
     pdf_path = tmp_path / "test.pdf"
     pdf_path.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
-    insert_version(db_engine, "valid-test-link", pdf_path)
+    original_storage = app.config["STORAGE_DIR"]
 
-    response = client.get("/api/get-version/valid-test-link")
+    try:
+        app.config["STORAGE_DIR"] = tmp_path
+
+        row = SimpleNamespace(
+            path=str(pdf_path),
+            link="valid-test-link",
+        )
+
+        engine = fake_database_row(row)
+
+        response = request_with_engine(
+            client,
+            "valid-test-link",
+            engine,
+        )
+
+    finally:
+        app.config["STORAGE_DIR"] = original_storage
 
     assert response.status_code == 200
 
@@ -76,10 +101,16 @@ def test_secret_link_success(client, db_engine, tmp_path, caplog):
     )
 
 
-def test_secret_link_invalid(client, db_engine, caplog):
+def test_secret_link_invalid(client, caplog):
     caplog.set_level(logging.INFO, logger="tatou.security")
 
-    response = client.get("/api/get-version/unknown-test-link")
+    engine = fake_database_row(None)
+
+    response = request_with_engine(
+        client,
+        "unknown-test-link",
+        engine,
+    )
 
     assert response.status_code == 404
 
@@ -93,21 +124,15 @@ def test_secret_link_invalid(client, db_engine, caplog):
 def test_secret_link_database_error(client, caplog):
     caplog.set_level(logging.INFO, logger="tatou.security")
 
-    
-    from server import app
+    engine = MagicMock()
 
-    original_engine = app.config.get("_ENGINE")
+    engine.connect.side_effect = RuntimeError("test database error")
 
-    try:
-        app.config["_ENGINE"] = None
-
-        response = client.get("/api/get-version/database-test-link")
-
-    finally:
-        if original_engine is None:
-            app.config.pop("_ENGINE", None)
-        else:
-            app.config["_ENGINE"] = original_engine
+    response = request_with_engine(
+        client,
+        "database-test-link",
+        engine,
+    )
 
     assert response.status_code == 503
 
@@ -118,15 +143,34 @@ def test_secret_link_database_error(client, caplog):
     )
 
 
-def test_secret_link_invalid_file_path(client, db_engine, tmp_path, caplog):
+def test_secret_link_invalid_file_path(client, tmp_path, caplog):
     caplog.set_level(logging.INFO, logger="tatou.security")
 
-   
-    outside_path = tmp_path.parent / "outside.pdf"
+    storage_dir = tmp_path / "storage"
+    storage_dir.mkdir()
 
-    insert_version(db_engine, "outside-test-link", outside_path)
+    outside_path = tmp_path / "outside.pdf"
 
-    response = client.get("/api/get-version/outside-test-link")
+    row = SimpleNamespace(
+        path=str(outside_path),
+        link="outside-test-link",
+    )
+
+    engine = fake_database_row(row)
+
+    original_storage = app.config["STORAGE_DIR"]
+
+    try:
+        app.config["STORAGE_DIR"] = storage_dir
+
+        response = request_with_engine(
+            client,
+            "outside-test-link",
+            engine,
+        )
+
+    finally:
+        app.config["STORAGE_DIR"] = original_storage
 
     assert response.status_code == 500
 
@@ -137,15 +181,31 @@ def test_secret_link_invalid_file_path(client, db_engine, tmp_path, caplog):
     )
 
 
-def test_secret_link_file_missing(client, db_engine, tmp_path, caplog):
+def test_secret_link_file_missing(client, tmp_path, caplog):
     caplog.set_level(logging.INFO, logger="tatou.security")
 
-   
     missing_path = tmp_path / "missing.pdf"
 
-    insert_version(db_engine, "missing-test-link", missing_path)
+    row = SimpleNamespace(
+        path=str(missing_path),
+        link="missing-test-link",
+    )
 
-    response = client.get("/api/get-version/missing-test-link")
+    engine = fake_database_row(row)
+
+    original_storage = app.config["STORAGE_DIR"]
+
+    try:
+        app.config["STORAGE_DIR"] = tmp_path
+
+        response = request_with_engine(
+            client,
+            "missing-test-link",
+            engine,
+        )
+
+    finally:
+        app.config["STORAGE_DIR"] = original_storage
 
     assert response.status_code == 410
 

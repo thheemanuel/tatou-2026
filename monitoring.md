@@ -87,7 +87,7 @@ Fields:
 - result
 - failure category
 
-### secret_link.access PLANNED
+### secret_link.access IMPLEMENTED
 
 Generated when public version retrieval is attempted.
 
