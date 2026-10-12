@@ -4,7 +4,9 @@ import logging
 
 from unittest.mock import patch
 
-import server
+import ctypes
+
+from server import app
 
 from server import RMAPServer
 
@@ -144,6 +146,10 @@ def test_get_link_protocol_rejected(client, caplog):
 
 def test_get_link_duplicate_link(client, caplog):
     caplog.set_level(logging.INFO, logger="tatou.security")
+    
+    view = app.view_functions["rmap_get_link"]
+    
+    
 
     with patch.object(
         RMAPServer,
@@ -151,11 +157,32 @@ def test_get_link_duplicate_link(client, caplog):
         return_value=("TestGroup", "test-link", {"payload": "response"}),
         create=True
     ):
+        
+        def raise_duplicate(*args, **kwargs):
+            raise FileExistsError("duplicate link")
        
-        response = client.post(
+        
+        closure_index = view.__code__.co_freevars.index(
+            "create_rmap_watermark"
+        )
+        
+        cell = view.__closure__[closure_index]
+        
+        original = cell.cell_contents
+        
+        try:
+            
+            cell.cell_contents = raise_duplicate
+            
+            
+            response = client.post(
             "/api/rmap-get-link",
             json={"payload": "test"},
-        )
+            )
+            
+        finally:
+            
+            cell.cell_contents= original
 
     
     assert response.status_code in (409, 500)
