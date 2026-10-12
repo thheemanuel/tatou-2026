@@ -74,7 +74,7 @@ Fields:
 - result
 - failure category
 
-### rmap.authentication PLANNED
+### rmap.authentication IMPLEMENTED
 
 Generated during RMAP authentication.
 
