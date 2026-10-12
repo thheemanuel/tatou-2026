@@ -1443,6 +1443,14 @@ def create_app():
         #reject the request if the structure doesnt match json
         
         if not isinstance(data, dict) or not isinstance(data.get("payload"), str):
+            
+            security_event(
+                "rmap.authentication",
+                stage="get_link",
+                result="failure",
+                reason="invalid_message_format",
+            )
+            
             return jsonify({"error": "invalid RMAP message"}), 400
         
         # the next step is to complete the rmap handshake 
@@ -1454,6 +1462,12 @@ def create_app():
         try:
             
             identity, link, response = rmap_server.receiveMsg2(data)
+            
+            security_event(
+                "rmap.authentication",
+                stage="get_link",
+                result="success",
+            )
             
             create_rmap_watermark(
                 identity=identity,
@@ -1471,17 +1485,40 @@ def create_app():
         # a lot of things can go wrong, lets try to catch all of them
         
         except RMAPError as e:
+            
+            security_event(
+                "rmap.authentication",
+                stage="get_link",
+                result="failure",
+                reason="protocol_rejected",
+            )
+            
             app.logger.warning("RMAP authentication failed: %s", e)
             return jsonify({
                 "error": "RMAP authentication failed"
             }), 401
 
         except FileExistsError:
+            
+            security_event(
+                "rmap.authentication",
+                stage="get_link",
+                result="processing_failure",
+                reason="duplicate_link",
+            )
+            
             return jsonify({
                 "error": "RMAP link already used"
             }), 409
             
         except Exception:
+            
+            security_event(
+                "rmap.authentication",
+                stage="get_link",
+                result="processing_failure",
+                reason="watermark_or_storage_error"
+            )
             
             app.logger.exception(
                 "Failed to create RMAP watermarked document"
