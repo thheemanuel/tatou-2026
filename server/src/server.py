@@ -835,8 +835,13 @@ def create_app():
             )
         
         # CWE-89 fix: cast to int so non-numeric input never reaches a query.
-        doc_id = int(document_id)
-        
+        # Here I have now implemented a fuzzing fix. a non-numeric id like ":" crashed int() with a ValueError, now it is refused instead with an error message (400).
+        try:
+            doc_id = int(document_id)
+        # We also add in TypeError here so that there has to be a document id provided.
+        # ValueError was the error we got in the fuzz test
+        except (TypeError, ValueError):
+            return jsonify({"error": "document id must be a number"}), 400
 
         # Fetch the document (enforce ownership)
         try:
