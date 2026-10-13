@@ -72,3 +72,6 @@ def test_fuzz_roundtrip_all_watermarking_methods(wm, secret, key):
 
 # We now recieved that 2 passed and 1 failed. So it is proven that Gustav has now patched the bug in his method. The failing method is now Theo's method.
 # The smallest failing input for Theo's method is still the same as before, secret="\x0b" a control character.
+
+# UPDATE 12.20 13-10
+# Theo has updated his method now with the base64 encoding of the secret. The same fiz as I implemented in my method.
