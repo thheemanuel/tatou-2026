@@ -1,3 +1,4 @@
+# Created by Tom Ellström Johansson
 # This will be the next test of my fuzzing specialization where I will try to test all group members watermarking methods in one script
 # It will be a simple test to see if we can find any bugs
 # The reason as to why we do this shared test is because the current test_watermarking_all_methods skips three out of the four methods
@@ -64,3 +65,10 @@ def test_fuzz_roundtrip_all_watermarking_methods(wm, secret, key):
 # I have however not tested longer secrets, other unicode characters and also ofcourse PDFs with more than 1 page.
 # The solution would be to first talk to Gustav and Theos about the bug found and find the cause for the bug. If the cause is the 
 # same as in my own method then the fix could be to implement Base64 in these methods aswell. 
+
+# RESULTS FROM TESTING - 13/10
+# Update: Gustav has since updated his method to fix the bug. He added in his mutation testing which enhanced and fixed his method. I will dive deeper into 
+# how he actually fixed it and if it is a similar fix to my own method. I will also test the new method to see if it passes the test now.
+
+# We now recieved that 2 passed and 1 failed. So it is proven that Gustav has now patched the bug in his method. The failing method is now Theo's method.
+# The smallest failing input for Theo's method is still the same as before, secret="\x0b" a control character.
