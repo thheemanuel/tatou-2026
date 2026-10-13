@@ -48,19 +48,19 @@ from __future__ import annotations
 
 from typing import Final
 
+# toms fuzzing test revealed that my keyword field input can accept some wierd caracters sometimes, I will solve this by used base64 characters.
+
+import base64
+
 
 # we use hmac-sha256 to authenticate the stored secret.
 # sha-256 is the hash function used inside hmac, while hmac also
 # incorporates a secret key.
-#
 # this allows read_secret() to detect an incorrect key or a modified
 # secret/authentication tag.
 
 import hashlib
 import hmac
-
-import hashlib
-import hmac 
 
 
 # use the import used in the watermark_method.py file that was provided at the beginning.
@@ -234,8 +234,14 @@ class watermarking_method_theo(WatermarkingMethod):
         
         #part 1, create the invisible watermark
             authentication_tag = self.compute_hmac(secret, key)
+            
+            # this is the fix i was talking about in the import section
+            
+            encoded_secret = base64.b64encode(
+                secret.encode("utf-8")
+            ).decode("ascii")
         
-            stored_watermark = (self._MARKER + secret + "---" + authentication_tag)
+            stored_watermark = (self._MARKER + encoded_secret + "---" + authentication_tag)
             
         # create a short visible identifier derived from the secret
         
@@ -346,7 +352,19 @@ class watermarking_method_theo(WatermarkingMethod):
         
         
         #separate the secret (groupXX) from the signature "abcdef123456"
-        secret, stored_tag = payload.rsplit("---", 1)
+        encoded_secret, stored_tag = payload.rsplit("---", 1)
+        
+        # make use of the fix regarding the fuzzing tests
+        
+        try:
+            secret = base64.b64decode(
+                encoded_secret,
+                validate=True
+            ).decode("utf-8")
+        except (ValueError, UnicodeError) as e:
+            raise SecretNotFoundError(
+                "Invalid Group 21 watermark encoding"
+            ) from e
         
         
         # take the extracted values from the keywords field and calculate the same hmac operation that was used when creating the watermark
