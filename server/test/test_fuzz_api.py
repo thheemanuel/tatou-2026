@@ -83,6 +83,7 @@ def users_table(db_engine):
     email=st.one_of(st.text(), st.integers(), st.booleans(), st.none()), 
     password=st.one_of(st.text(), st.integers(), st.booleans(), st.none()),
     )
+# Testing the function above
 def test_fuzz_login_credentials(client, users_table, email, password):
     response = client.post("/api/login", json={"email": email, "password": password})
     assert response.status_code < 500
@@ -97,3 +98,38 @@ def test_fuzz_login_credentials(client, users_table, email, password):
 #   Also added in an example for the test on login.
 
 # Test 3: Passed on both login and delete-document. The testing worked and there should now only be real text emails that can be inputed. We also have correct error messaging instead of a crash.
+
+
+# ----------- Create-user fuzzing test
+# Reusing logic from the login test above. From server.py we can see that create-user has the parameters for email, password and login.
+@example(email=1, login=None, password=None)
+@example(email=None, login=1, password=None)
+@settings(max_examples=200, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    email=st.one_of(st.text(), st.integers(), st.booleans(), st.none()),
+    login=st.one_of(st.text(), st.integers(), st.booleans(), st.none()),
+    password=st.one_of(st.text(), st.integers(), st.booleans(), st.none()),
+)
+def test_fuzz_create_user_credentials(client, users_table, email, login, password):
+    response = client.post("/api/create-user", json={"email": email, "login": login, "password": password})
+    assert response.status_code < 500
+
+# Testing the functions above by 
+def test_create_user_method(client, users_table):
+    response = client.post("api/create-user", json={"email": "Bob@testing.com", "login": "Bob", "password": "testPW123"})
+    assert response.status_code == 201
+
+# Test 1: As I have done with the previous testing there was some errors in the code but after editing and debugging I have now fixed it.
+
+# Test 2: This time we got the results 1 failed, 3 passed. The 2 previous tests passed and the new create-user failed.
+# Hypthesis states that it found 2 distinct failures.
+#   1. "...\server\src\server.py", line 355, in create_user login = (payload.get("login") or "").strip() AttributeError: 'int' object has no attribute 'strip' login=1,
+#   2. File "...\server\src\server.py", line 354, in create_user email = (payload.get("email") or "").strip().lower() AttributeError: 'int' object has no attribute 'strip' email=1,
+
+# It seems to be the same bug as in login, with strip() for integers. This is also a public attribute of the program where anyone can 
+# sign up so it is a bug that anyone can trigger. They seem to be flagged as 2 errors but they are the same bug and require a similar fix to what we did before with the ininstance and make 
+# sure that it is not integers in some data.
+# Also adding in regression tests for examples of inputs.
+
+# Test 3: Last test we recieved 4 passed and 0 failed within 0.92s. Now we have covered delete-document, create-user.
+# Our full test suite nmow says: 201 passed. So we have updated our coverage quite abit.
