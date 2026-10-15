@@ -19,6 +19,7 @@ import sys
 # This is mentioned in the owasp.github.io/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/
 # as something that is common across vulnerabilities in APIs
 import time
+import secrets
 from collections import defaultdict
 
 from pathlib import Path
@@ -1004,13 +1005,19 @@ def create_app():
         except Exception as e:
             return jsonify({"error": f"watermarking failed: {e}"}), 500
 
-        # build destination file name: "<original_name>__<intended_to>.pdf"
+        # The link has to be random. It used to be sha1("<name>__<recipient>.pdf"),
+        # which anyone can guess (and get-version needs no login), and a second
+        # version for the same recipient got the same link and overwrote the
+        # first one's file. 40 hex characters, same format as before.
+        link_token = secrets.token_hex(20)
+
+        # build destination file name: "<original_name>__<intended_to>__<start of link>.pdf"
         base_name = Path(row.name or file_path.name).stem
         intended_slug = secure_filename(intended_for)
         dest_dir = file_path.parent / "watermarks"
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        candidate = f"{base_name}__{intended_slug}.pdf"
+        candidate = f"{base_name}__{intended_slug}__{link_token[:12]}.pdf"
         dest_path = dest_dir / candidate
 
         # write bytes
@@ -1019,9 +1026,6 @@ def create_app():
                 f.write(wm_bytes)
         except Exception as e:
             return jsonify({"error": f"failed to write watermarked file: {e}"}), 500
-
-        # link token = sha1(watermarked_file_name)
-        link_token = hashlib.sha1(candidate.encode("utf-8")).hexdigest()
 
         try:
             with get_engine().begin() as conn:
