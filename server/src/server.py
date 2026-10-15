@@ -351,9 +351,16 @@ def create_app():
     @app.post("/api/create-user")
     def create_user():
         payload = request.get_json(silent=True) or {}
-        email = (payload.get("email") or "").strip().lower()
-        login = (payload.get("login") or "").strip()
-        password = payload.get("password") or ""
+        email = (payload.get("email"))                  # Removed or "").strip().lower()
+        login = (payload.get("login"))                  # Removed or "").strip()
+        password = payload.get("password")              # Removed or ""
+        # fuzzing fix here is that we do not allow JSON number as email or login since it crashes the server on .strip() for integers.
+        # The crash only showed for login and email but we will do an additional check as precaution for password aswell.
+        if not isinstance(email, str) or not isinstance(login, str) or not isinstance(password, str):
+            return jsonify({"error": "email, login and password must be text"}), 400
+        email = email.strip().lower()
+        login = login.strip()
+
         if not email or not login or not password:
             return jsonify({"error": "email, login, and password are required"}), 400
         
