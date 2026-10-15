@@ -74,6 +74,57 @@ def test_explore_pdf_identifies_all_pages():
     
     
     
+
+def test_explore_pdf_fallback_parser():
+    # deliberately incomplete pdf-like data
+    # pymupdf should reject it, triggering the fallback parser
+    
+    # missing important parts of a complete pdf document 
+    
+    # the tests should assume that pymupdf rejects these bytes
+    pdf_bytes = (
+        b"%PDF-1.4\n"
+        b"1 0 obj\n"
+        b"<< /Type /Catalog >>\n"
+        b"endobj\n"
+        b"2 0 obj\n"
+        b"<< /Type /Page >>\n"
+        b"endobj\n"
+    )
+
+    # passes the bytes to the pdf inspection function within tatou
+    
+    # it should??? i hope, return useful structural information even though the document is incomplete
+    result = explore_pdf(pdf_bytes)
+
+    assert result["type"] == "Document"
+    assert result["size"] == len(pdf_bytes)
+
+    # check that the fallback parser identified the objects
+    object_nodes = [
+        node for node in result["children"]
+        if node["id"].startswith("obj:")
+    ]
+
+    assert len(object_nodes) == 2
+    assert object_nodes[0]["type"] == "Catalog"
+    assert object_nodes[1]["type"] == "Page"
+
+    # check that the page was identified
+    page_nodes = [
+        node for node in result["children"]
+        if node["id"].startswith("page:")
+    ]
+
+    assert len(page_nodes) == 1
+    assert page_nodes[0]["id"] == "page:0000"
+
+    # results should be deterministic
+    assert explore_pdf(pdf_bytes) == result
+
+    
+    
+    
     
     
 
