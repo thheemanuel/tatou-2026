@@ -392,8 +392,14 @@ def create_app():
     @app.post("/api/login")
     def login():
         payload = request.get_json(silent=True) or {}
-        email = (payload.get("email") or "").strip()
-        password = payload.get("password") or ""
+        email = (payload.get("email"))                      # Removed or "").strip()
+        password = payload.get("password")                  # Removed or ""
+        # Fuzzing fix here. A JSON was inputed with a number for the email and crashed on .strip() since it does not work for numbers, so it gave us a AttributeError.
+        # This means that both these fields must be text before we use them.
+        if not isinstance(email, str) or not isinstance(password, str):
+            return jsonify({"error": "The email or password must be text, please try again"}), 400
+        email = email.strip()                               # Add in the strip again here
+
         if not email or not password:
             return jsonify({"error": "email and password are required"}), 400
 
