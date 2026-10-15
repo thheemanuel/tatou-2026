@@ -46,8 +46,10 @@ def test_explore_pdf_identifies_all_pages():
     
     pages = []
     
+    
+
     for node in result["children"]:
-        if node["type"] == "Page":
+        if node["type"] == "Page" and node["id"].startswith("page:"):
             pages.append(node)
             
     
