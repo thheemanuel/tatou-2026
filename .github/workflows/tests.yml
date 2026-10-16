@@ -1,0 +1,29 @@
+# Runs the test suite on GitHub every time someone pushes or opens a pull request,
+# so we can see on the PR if the tests pass before merging.
+# The tests don't need a database or the RMAP keys (conftest.py uses SQLite and a
+# fake RMAP server), so no secrets are needed here.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the project and the test dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run the tests with coverage
+        run: python -m pytest --cov=src --cov-report=term-missing
